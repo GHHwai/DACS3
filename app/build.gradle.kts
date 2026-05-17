@@ -7,10 +7,10 @@ plugins {
 }
 
 android {
-    namespace = "com.mohsin.chatly"
+    namespace = "com.example.chatly"
     compileSdk = 35
     defaultConfig {
-        applicationId = "com.mohsin.chatly"
+        applicationId = "com.chatbot.chatly"
         minSdk = 23
         targetSdk = 35
         versionCode = 1

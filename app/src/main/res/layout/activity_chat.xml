@@ -27,7 +27,7 @@
         android:padding="8dp"
         android:clipToPadding="false" />
 
-    <com.mohsin.chatly.ui.components.TypingIndicatorView
+    <com.example.chatly.ui.components.TypingIndicatorView
         android:id="@+id/typingIndicator"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
