@@ -24,6 +24,7 @@ import com.example.chatly.data.local.AppDatabase
 import com.bumptech.glide.Glide
 import java.util.UUID
 import com.google.android.material.imageview.ShapeableImageView
+import com.example.chatly.ui.chat.UserDetailActivity
 
 class ChatActivity : AppCompatActivity() {
     private lateinit var viewModel: ChatViewModel

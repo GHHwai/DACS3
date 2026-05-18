@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:1074130301218:android:e6510087906b7f8598357b",
         "android_client_info": {
-          "package_name": "com.chatbot.chatly"
+          "package_name": "com.example.chatly"
         }
       },
       "oauth_client": [

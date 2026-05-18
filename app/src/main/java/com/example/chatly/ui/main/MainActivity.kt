@@ -14,6 +14,7 @@ import com.example.chatly.data.model.User
 import com.example.chatly.ui.auth.LoginActivity
 import com.example.chatly.ui.chat.ChatActivity
 import androidx.appcompat.widget.Toolbar
+import com.google.android.material.textfield.TextInputEditText
 import com.example.chatly.ui.profile.ProfileActivity
 
 class MainActivity : AppCompatActivity() {
@@ -46,6 +47,10 @@ class MainActivity : AppCompatActivity() {
         }
         rvUsers.layoutManager = LinearLayoutManager(this)
         rvUsers.adapter = adapter
+
+        findViewById<com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton>(R.id.fabAiChat).setOnClickListener {
+            startActivity(Intent(this, com.example.chatly.ui.ai.AiChatActivity::class.java))
+        }
 
         fetchUsers()
     }

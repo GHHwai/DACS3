@@ -26,6 +26,9 @@
         <activity android:name=".ui.chat.ChatActivity" />
         <activity android:name=".ui.profile.EditProfileActivity"/>
         <activity android:name=".ui.profile.ProfileActivity"/>
+        <activity android:name=".ui.ai.AiChatActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ui.main.MainActivity" />
         <activity android:name=".ui.main.GreetingActivity"/>
         <activity android:name=".ui.chat.UserDetailActivity"/>
