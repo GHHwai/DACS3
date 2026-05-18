@@ -1,26 +1,36 @@
 {
   "project_info": {
-    "project_number": "616269319756",
-    "project_id": "chatly-a2f8e",
-    "storage_bucket": "chatly-a2f8e.firebasestorage.app"
+    "project_number": "1074130301218",
+    "project_id": "chatly-13ea3",
+    "storage_bucket": "chatly-13ea3.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:616269319756:android:a12ef8839e82f88026eee9",
+        "mobilesdk_app_id": "1:1074130301218:android:e6510087906b7f8598357b",
         "android_client_info": {
-          "package_name": "com.mohsin.chatly"
+          "package_name": "com.example.chatly"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1074130301218-upum7hal1h25t2dcg84mje7ql7vl0q6t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyDLOTOB0K3BTyEc1lnvmGm8sHisrWI7368"
+          "current_key": "AIzaSyB39JhyFoR_Oh67DnBtG8tnl9WLI0bCsdk"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1074130301218-upum7hal1h25t2dcg84mje7ql7vl0q6t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

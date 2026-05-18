@@ -4,7 +4,7 @@
     <data>
         <variable
             name="viewModel"
-            type="com.mohsin.chatly.ui.profile.ProfileViewModel" />
+            type="com.example.chatly.ui.profile.ProfileViewModel" />
     </data>
 
     <ScrollView

@@ -1,0 +1,18 @@
+package com.example.chatly.data.local
+
+import androidx.room.*
+import androidx.room.OnConflictStrategy.Companion.REPLACE
+import com.example.chatly.data.model.UserEntity
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface UserDao {
+    @Query("SELECT * FROM user WHERE uid = :uid LIMIT 1")
+    fun getUser(uid: String): Flow<UserEntity?>
+
+    @Insert(onConflict = REPLACE)
+    suspend fun insertUser(user: UserEntity)
+
+    @Update
+    suspend fun updateUser(user: UserEntity)
+}
