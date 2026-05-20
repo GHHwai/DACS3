@@ -6,32 +6,71 @@ import androidx.lifecycle.*
 import com.example.chatly.data.local.AppDatabase
 import com.example.chatly.data.model.User
 import com.example.chatly.data.repository.ProfileRepository
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+
+data class ProfileUiState(
+    val displayName: String = "",
+    val email: String = "",
+    val mobile: String = "",
+    val photoUrl: String? = null,
+    val dob: String = "",
+    val gender: String = "",
+    val profileImageUri: Uri? = null,
+    val isLoading: Boolean = true,
+    val error: String? = null,
+    val isSaved: Boolean = false
+)
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getInstance(application)
     private val repo = ProfileRepository(db.userDao())
-    val user: LiveData<User?> = repo.getUserFlow().asLiveData()
+    
+    private val _uiState = MutableStateFlow(ProfileUiState())
+    val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
-    val displayName = MutableLiveData<String>()
-    val email = MutableLiveData<String>()
-    val mobile = MutableLiveData<String>()
-    val photoUrl = MutableLiveData<String?>()
-    val dob = MutableLiveData<String>()
-    val gender = MutableLiveData<String>()
+    init {
+        viewModelScope.launch {
+            repo.getUserFlow().collect { user ->
+                _uiState.update { state ->
+                    user?.let {
+                        state.copy(
+                            displayName = it.displayName ?: "",
+                            email = it.email ?: "",
+                            mobile = it.mobile ?: "",
+                            photoUrl = it.photoUrl,
+                            dob = it.dob ?: "",
+                            gender = it.gender ?: "",
+                            isLoading = false
+                        )
+                    } ?: state.copy(isLoading = false)
+                }
+            }
+        }
+    }
 
-    val saveStatus = MutableLiveData<Boolean>()
-    val errorMsg = MutableLiveData<String>()
-    val profileImageUri = MutableLiveData<Uri?>()
+    fun onDisplayNameChange(value: String) {
+        _uiState.update { it.copy(displayName = value) }
+    }
 
-    fun loadProfileForEdit(user: User?) {
-        if (user == null) return
-        displayName.value = user.displayName ?: ""
-        email.value = user.email ?: ""
-        mobile.value = user.mobile ?: ""
-        photoUrl.value = user.photoUrl
-        dob.value = user.dob ?: ""
-        gender.value = user.gender ?: ""
+    fun onMobileChange(value: String) {
+        _uiState.update { it.copy(mobile = value) }
+    }
+
+    fun onDobChange(value: String) {
+        _uiState.update { it.copy(dob = value) }
+    }
+
+    fun onGenderChange(value: String) {
+        _uiState.update { it.copy(gender = value) }
+    }
+
+    fun onImageSelected(uri: Uri?) {
+        _uiState.update { it.copy(profileImageUri = uri) }
+    }
+
+    fun setPhotoUrl(url: String) {
+        _uiState.update { it.copy(photoUrl = url) }
     }
 
     fun refreshProfile() {
@@ -41,35 +80,30 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun saveProfile() {
+        val currentState = _uiState.value
         val updatedUser = User(
             uid = repo.getCurrentUserId() ?: "",
-            displayName = displayName.value ?: "",
-            email = email.value ?: "",
-            mobile = mobile.value ?: "",
-            photoUrl = photoUrl.value, // Cloudinary URL here!
-            dob = dob.value ?: "",
-            gender = gender.value ?: ""
+            displayName = currentState.displayName,
+            email = currentState.email,
+            mobile = currentState.mobile,
+            photoUrl = currentState.photoUrl,
+            dob = currentState.dob,
+            gender = currentState.gender
         )
+        
+        _uiState.update { it.copy(isLoading = true, error = null) }
+        
         viewModelScope.launch {
             try {
                 repo.updateUser(updatedUser)
-                saveStatus.postValue(true)
+                _uiState.update { it.copy(isLoading = false, isSaved = true) }
             } catch (e: Exception) {
-                errorMsg.postValue(e.localizedMessage ?: "Unknown error")
-                saveStatus.postValue(false)
+                _uiState.update { it.copy(isLoading = false, error = e.localizedMessage ?: "Unknown error") }
             }
         }
     }
-
-    fun getCurrentUser(): User {
-        return User(
-            uid = repo.getCurrentUserId() ?: "",
-            email = email.value ?: "",
-            displayName = displayName.value ?: "",
-            mobile = mobile.value ?: "",
-            photoUrl = photoUrl.value,
-            dob = dob.value ?: "",
-            gender = gender.value ?: ""
-        )
+    
+    fun resetSaveStatus() {
+        _uiState.update { it.copy(isSaved = false) }
     }
 }

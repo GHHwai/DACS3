@@ -1,8 +1,11 @@
 package com.example.chatly.data.remote
 
+import com.example.chatly.data.model.Message
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.example.chatly.data.model.Message
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 class FirebaseService(
@@ -55,15 +58,22 @@ class FirebaseService(
             .await()
     }
 
-    fun listenForMessages(chatUserId: String, myUserId: String, onMessage: (Message) -> Unit) {
-        firestore.collection("messages")
+    fun listenForMessages(chatUserId: String, myUserId: String): Flow<List<Message>> = callbackFlow {
+        val listener = firestore.collection("messages")
             .whereIn("senderId", listOf(myUserId, chatUserId))
             .whereIn("receiverId", listOf(myUserId, chatUserId))
             .addSnapshotListener { snapshot, e ->
-                if (e != null || snapshot == null) return@addSnapshotListener
-                val messages = snapshot.toObjects(Message::class.java)
-                messages.forEach { onMessage(it) }
+                if (e != null) {
+                    close(e)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val messages = snapshot.toObjects(Message::class.java)
+                        .sortedBy { it.timestamp }
+                        .map { it.copy(isMine = it.senderId == myUserId) }
+                    trySend(messages)
+                }
             }
+        awaitClose { listener.remove() }
     }
-
 }

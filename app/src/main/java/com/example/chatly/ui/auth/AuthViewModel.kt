@@ -19,6 +19,7 @@ class AuthViewModel : ViewModel() {
 
     fun login(email: String, password: String) {
         Log.d("AuthViewModel", "Attempt login with $email")
+        _error.value = null
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -32,6 +33,7 @@ class AuthViewModel : ViewModel() {
     }
 
     fun register(displayName: String, mobile: String, email: String, password: String) {
+        _error.value = null
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {

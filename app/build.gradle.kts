@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
@@ -28,6 +29,12 @@ android {
         }
         val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY") ?: ""
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+        
+        val cloudinaryCloudName = localProperties.getProperty("CLOUDINARY_CLOUD_NAME") ?: ""
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"$cloudinaryCloudName\"")
+        
+        val cloudinaryPreset = localProperties.getProperty("CLOUDINARY_UNSIGNED_PRESET") ?: ""
+        buildConfigField("String", "CLOUDINARY_UNSIGNED_PRESET", "\"$cloudinaryPreset\"")
     }
 
     buildTypes {
@@ -47,14 +54,33 @@ android {
         jvmTarget = "11"
     }
     buildFeatures {
-        viewBinding = true
-        dataBinding = true
         buildConfig = true
+        compose = true
     }
 }
 
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
+
+    // Jetpack Compose
+    val composeBom = platform(libs.androidx.compose.bom)
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.material3)
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.runtime.livedata)
+    implementation(libs.coil.compose)
+
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     // AndroidX & Material
     implementation(libs.androidx.core.ktx)
@@ -65,8 +91,8 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation(libs.androidx.navigation.fragment.ktx)
-    implementation(libs.androidx.navigation.ui.ktx)
+    implementation("androidx.navigation:navigation-fragment-ktx:2.8.5")
+    implementation("androidx.navigation:navigation-ui-ktx:2.8.5")
 
     // AI & Network
     implementation(libs.retrofit.core)
@@ -75,10 +101,7 @@ dependencies {
     implementation(libs.okhttp.logging)
 
     // Markdown Rendering
-    implementation(libs.markwon.core)
-    implementation(libs.markwon.ext.tables)
-    implementation(libs.markwon.ext.strikethrough)
-    implementation(libs.markwon.linkify)
+    // Removed legacy Markwon dependencies
 
     // Room
     implementation(libs.room.runtime)
@@ -90,11 +113,10 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-database-ktx")
-    implementation(libs.firebase.storage.ktx)
+    implementation("com.google.firebase:firebase-storage-ktx")
 
     // Glide
-    implementation ("com.github.bumptech.glide:glide:4.16.0")
-    ksp ("com.github.bumptech.glide:compiler:4.16.0")
+    // Removed legacy Glide dependencies
 
     // Utilities
     implementation ("org.json:json:20230227")
