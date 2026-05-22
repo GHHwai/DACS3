@@ -6,12 +6,10 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.chatly.ui.screen.*
 import com.example.chatly.viewmodel.AiChatViewModel
-import com.example.chatly.ui.auth.AuthViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.chatly.data.remote.GeminiApiService
-import com.example.chatly.data.repository.AiChatRepository
+import com.example.chatly.data.repository.FirebaseAiChatRepository
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -20,7 +18,7 @@ sealed class Screen(val route: String) {
     object Register : Screen("register")
     object Main : Screen("main")
     object Chat : Screen("chat/{userId}/{userName}/{userPhotoUrl}") {
-        fun createRoute(userId: String, userName: String, userPhotoUrl: String) = 
+        fun createRoute(userId: String, userName: String, userPhotoUrl: String) =
             "chat/$userId/$userName/$userPhotoUrl"
     }
     object AiChat : Screen("ai_chat")
@@ -40,6 +38,7 @@ fun ChatlyNavHost(
         navController = navController,
         startDestination = startDestination
     ) {
+        // Splash
         composable(Screen.Splash.route) {
             SplashScreen(
                 onNavigationNext = {
@@ -55,6 +54,7 @@ fun ChatlyNavHost(
             )
         }
 
+        // Greeting
         composable(Screen.Greeting.route) {
             GreetingScreen(
                 onLoginClick = { navController.navigate(Screen.Login.route) },
@@ -62,6 +62,7 @@ fun ChatlyNavHost(
             )
         }
 
+        // Login
         composable(Screen.Login.route) {
             LoginScreen(
                 onLoginSuccess = {
@@ -73,6 +74,7 @@ fun ChatlyNavHost(
             )
         }
 
+        // Register
         composable(Screen.Register.route) {
             RegisterScreen(
                 onRegisterSuccess = {
@@ -84,6 +86,7 @@ fun ChatlyNavHost(
             )
         }
 
+        // Main
         composable(Screen.Main.route) {
             MainScreen(
                 onUserClick = { user ->
@@ -101,6 +104,7 @@ fun ChatlyNavHost(
             )
         }
 
+        // Chat
         composable(
             route = Screen.Chat.route,
             arguments = listOf(
@@ -117,12 +121,13 @@ fun ChatlyNavHost(
                 userName = userName,
                 userPhotoUrl = userPhotoUrl,
                 onBackClick = { navController.popBackStack() },
-                onUserClick = { 
+                onUserClick = {
                     navController.navigate(Screen.UserDetail.createRoute(userId))
                 }
             )
         }
 
+        // User Detail
         composable(
             route = Screen.UserDetail.route,
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
@@ -134,9 +139,10 @@ fun ChatlyNavHost(
             )
         }
 
+        // AI Chat (Firebase AI)
         composable(Screen.AiChat.route) {
             val aiViewModel: AiChatViewModel = viewModel(
-                factory = AiChatViewModel.Factory(AiChatRepository(GeminiApiService.create()))
+                factory = AiChatViewModel.Factory(FirebaseAiChatRepository())
             )
             AiChatScreen(
                 viewModel = aiViewModel,
@@ -144,6 +150,7 @@ fun ChatlyNavHost(
             )
         }
 
+        // Profile
         composable(Screen.Profile.route) {
             ProfileScreen(
                 onEditProfileClick = { navController.navigate(Screen.EditProfile.route) },
@@ -151,6 +158,7 @@ fun ChatlyNavHost(
             )
         }
 
+        // Edit Profile
         composable(Screen.EditProfile.route) {
             EditProfileScreen(
                 onBackClick = { navController.popBackStack() }

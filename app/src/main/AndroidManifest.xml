@@ -7,17 +7,14 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
     <application
+        android:name=".ChatlyApplication"
         android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
         android:icon="@drawable/logo_icon"
         android:label="@string/app_name"
         android:roundIcon="@drawable/logo_icon"
         android:supportsRtl="true"
         android:theme="@style/Theme.Chatly"
-        tools:targetApi="31" >
-
-        <meta-data android:name="CLOUDINARY_URL" android:value="cloudinary://@myCloudName"/>
+        tools:targetApi="31">
 
         <activity
             android:name=".ui.main.MainActivity"
