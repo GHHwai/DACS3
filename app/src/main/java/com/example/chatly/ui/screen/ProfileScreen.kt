@@ -60,14 +60,25 @@ fun ProfileScreen(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                AsyncImage(
-                    model = uiState.photoUrl ?: Icons.Default.Person,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
+                if (!uiState.photoUrl.isNullOrEmpty()) {
+
+                    AsyncImage(
+                        model = uiState.photoUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+
+                } else {
+
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(120.dp)
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 

@@ -1,5 +1,6 @@
 package com.example.chatly.ui.screen
 
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,11 +23,13 @@ import com.example.chatly.data.model.User
 import com.example.chatly.ui.components.ChatlyTopAppBar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import androidx.compose.material.icons.filled.CalendarMonth
 
 @Composable
 fun MainScreen(
     onUserClick: (User) -> Unit,
     onAiChatClick: () -> Unit,
+    onScheduleClick: () -> Unit,
     onProfileClick: () -> Unit,
     onLogout: () -> Unit,
     viewModel: com.example.chatly.ui.main.MainViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
@@ -39,14 +42,43 @@ fun MainScreen(
             ChatlyTopAppBar(
                 title = "Chatly",
                 actions = {
-                    IconButton(onClick = onProfileClick) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    IconButton(
+                        onClick = onScheduleClick
+                    ) {
+
+                        Icon(
+                            Icons.Default.CalendarMonth,
+                            contentDescription = "Schedule"
+                        )
                     }
+
+                    // Profile
+                    IconButton(onClick = onProfileClick) {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = "Profile"
+                        )
+                    }
+
+                    // Settings
+                    IconButton(onClick = {
+                        // TODO: mở settings screen
+                    }) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Settings"
+                        )
+                    }
+
+                    // Logout
                     IconButton(onClick = {
                         viewModel.logout()
                         onLogout()
                     }) {
-                        Icon(Icons.Default.Person, contentDescription = "Logout")
+                        Icon(
+                            Icons.Default.Logout,
+                            contentDescription = "Logout"
+                        )
                     }
                 }
             )

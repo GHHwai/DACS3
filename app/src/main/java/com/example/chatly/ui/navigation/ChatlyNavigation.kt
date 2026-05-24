@@ -17,6 +17,22 @@ sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
     object Main : Screen("main")
+    object Schedule : Screen("schedule")
+
+    object AddSchedule : Screen("add_schedule")
+
+    object EditSchedule : Screen("edit_schedule/{scheduleId}") {
+
+        fun createRoute(scheduleId: String): String {
+
+            return "edit_schedule/$scheduleId"
+        }
+    }
+    object AddExam : Screen("add_exam")
+
+    object EditExam : Screen("edit_exam/{examId}") {
+        fun createRoute(examId: String) = "edit_exam/$examId"
+    }
     object Chat : Screen("chat/{userId}/{userName}/{userPhotoUrl}") {
         fun createRoute(userId: String, userName: String, userPhotoUrl: String) =
             "chat/$userId/$userName/$userPhotoUrl"
@@ -88,17 +104,50 @@ fun ChatlyNavHost(
 
         // Main
         composable(Screen.Main.route) {
+
             MainScreen(
+
                 onUserClick = { user ->
+
                     navController.navigate(
-                        Screen.Chat.createRoute(user.uid, user.displayName ?: "", user.photoUrl ?: "none")
+                        Screen.Chat.createRoute(
+                            user.uid,
+                            user.displayName ?: "",
+                            user.photoUrl ?: "none"
+                        )
                     )
                 },
-                onAiChatClick = { navController.navigate(Screen.AiChat.route) },
-                onProfileClick = { navController.navigate(Screen.Profile.route) },
+
+                onAiChatClick = {
+
+                    navController.navigate(
+                        Screen.AiChat.route
+                    )
+                },
+
+                onScheduleClick = {
+
+                    navController.navigate(
+                        Screen.Schedule.route
+                    )
+                },
+
+                onProfileClick = {
+
+                    navController.navigate(
+                        Screen.Profile.route
+                    )
+                },
+
                 onLogout = {
-                    navController.navigate(Screen.Greeting.route) {
-                        popUpTo(Screen.Main.route) { inclusive = true }
+
+                    navController.navigate(
+                        Screen.Greeting.route
+                    ) {
+
+                        popUpTo(Screen.Main.route) {
+                            inclusive = true
+                        }
                     }
                 }
             )
@@ -123,6 +172,83 @@ fun ChatlyNavHost(
                 onBackClick = { navController.popBackStack() },
                 onUserClick = {
                     navController.navigate(Screen.UserDetail.createRoute(userId))
+                }
+            )
+        }
+        composable(Screen.Schedule.route) {
+            ScheduleScreen(
+                onAddStudyClick = {
+                    navController.navigate(Screen.AddSchedule.route)
+                },
+                onAddExamClick = {
+                    navController.navigate(Screen.AddExam.route)
+                },
+                onEditStudyClick = { id ->
+                    navController.navigate(Screen.EditSchedule.createRoute(id))
+                },
+                onEditExamClick = { id ->
+                    navController.navigate(Screen.EditExam.createRoute(id))
+                }
+            )
+        }
+
+        composable(Screen.AddSchedule.route) {
+
+            AddScheduleScreen(
+
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+
+            route = Screen.EditSchedule.route,
+
+            arguments = listOf(
+
+                navArgument("scheduleId") {
+                    type = NavType.StringType
+                }
+            )
+
+        ) { backStackEntry ->
+
+            val scheduleId =
+                backStackEntry.arguments?.getString("scheduleId") ?: ""
+
+            EditScheduleScreen(
+
+                scheduleId = scheduleId,
+
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(Screen.AddExam.route) {
+            AddExamScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(
+            route = Screen.EditExam.route,
+            arguments = listOf(
+                navArgument("examId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+
+            val examId = backStackEntry.arguments?.getString("examId") ?: ""
+
+            EditExamScreen(
+                examId = examId,
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }
