@@ -1,15 +1,21 @@
 package com.example.chatly.ui.chat
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.chatly.data.model.Group
 import com.google.firebase.auth.FirebaseAuth
@@ -17,20 +23,19 @@ import com.google.firebase.auth.FirebaseAuth
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupsScreen(
-    viewModel: GroupChatViewModel, // Nhận vào ViewModel ở đây
+    viewModel: GroupChatViewModel,
     onGroupClick: (Group) -> Unit,
     onBackClick: () -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var newGroupName by remember { mutableStateOf("") }
 
-    // Tự động load danh sách nhóm từ Firebase/Repository khi màn hình mở lên
     LaunchedEffect(Unit) {
         viewModel.loadGroups()
     }
 
-    // Quan sát danh sách nhóm từ ViewModel (Dữ liệu thay đổi UI tự động cập nhật)
     val groups by viewModel.groups.collectAsState()
+    val bubbleBrush = Brush.linearGradient(colors = listOf(Color(0xFF9FF3E8), Color(0xFFC0E0FF)))
 
     Scaffold(
         topBar = {
@@ -38,38 +43,37 @@ fun GroupsScreen(
                 title = { Text(text = "Group") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Quay lại"
-                        )
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
                     }
                 },
                 actions = {
                     IconButton(onClick = { showDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Filled.Add,
-                            contentDescription = "Thêm nhóm"
-                        )
+                        Icon(imageVector = Icons.Filled.Add, contentDescription = "Thêm nhóm")
                     }
                 }
             )
         }
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+            modifier = Modifier.fillMaxSize().padding(innerPadding).background(Color(0xFFFAFAFA)),
+            contentPadding = PaddingValues(top = 8.dp)
         ) {
             items(groups) { group ->
-                Card(
+                // --- ĐÃ BIẾN THÀNH CARD GRADIENT VIỀN KIM LOẠI ĐỒNG BỘ ---
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .shadow(4.dp, shape = RoundedCornerShape(12.dp))
+                        .border(width = 2.dp, color = Color(0xFFB0C4DE), shape = RoundedCornerShape(12.dp))
+                        .background(brush = bubbleBrush, shape = RoundedCornerShape(12.dp))
                         .clickable { onGroupClick(group) }
+                        .padding(16.dp)
                 ) {
                     Text(
                         text = group.groupName,
-                        modifier = Modifier.padding(16.dp)
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color(0xFF2C3E50)
                     )
                 }
             }
@@ -77,10 +81,7 @@ fun GroupsScreen(
 
         if (showDialog) {
             AlertDialog(
-                onDismissRequest = {
-                    showDialog = false
-                    newGroupName = ""
-                },
+                onDismissRequest = { showDialog = false; newGroupName = "" },
                 title = { Text(text = "Tạo nhóm mới") },
                 text = {
                     OutlinedTextField(
@@ -94,34 +95,23 @@ fun GroupsScreen(
                     Button(
                         onClick = {
                             if (newGroupName.isNotBlank()) {
-                                // 1. Lấy UID của chính bạn đang đăng nhập
                                 val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: "unknown"
-
-                                // 2. Điền đầy đủ thông tin vào Object Group trước khi gửi lên Firebase
                                 val newGroup = Group(
-                                    id = "", // Để trống vì bên Repository bạn đã dùng doc.id rồi, rất tốt!
+                                    id = "",
                                     groupName = newGroupName,
-                                    createdBy = currentUserId,                      // Người tạo nhóm
-                                    members = listOf(currentUserId),                // Người tạo tự động là thành viên đầu tiên
+                                    createdBy = currentUserId,
+                                    members = listOf(currentUserId),
                                     createdAt = System.currentTimeMillis()
                                 )
-
                                 viewModel.createGroup(newGroup)
-                                showDialog = false
-                                newGroupName = ""
+                                showDialog = false; newGroupName = ""
                             }
-                        }
-                    ) {
-                        Text("Tạo")
-                    }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7B3399))
+                    ) { Text("Tạo") }
                 },
                 dismissButton = {
-                    TextButton(onClick = {
-                        showDialog = false
-                        newGroupName = ""
-                    }) {
-                        Text("Hủy")
-                    }
+                    TextButton(onClick = { showDialog = false; newGroupName = "" }) { Text("Hủy") }
                 }
             )
         }
