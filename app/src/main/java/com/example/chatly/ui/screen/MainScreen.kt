@@ -29,7 +29,10 @@ import androidx.compose.material.icons.filled.CalendarMonth
 fun MainScreen(
     onUserClick: (User) -> Unit,
     onAiChatClick: () -> Unit,
+    // --- ĐÃ GỘP CẢ 2 THAM SỐ VÀO ĐÂY AN TOÀN, SẠCH KÝ HIỆU GIT ---
+    onGroupChatClick: () -> Unit,
     onScheduleClick: () -> Unit,
+    // -----------------------------------------------------------
     onProfileClick: () -> Unit,
     onLogout: () -> Unit,
     viewModel: com.example.chatly.ui.main.MainViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
@@ -45,7 +48,6 @@ fun MainScreen(
                     IconButton(
                         onClick = onScheduleClick
                     ) {
-
                         Icon(
                             Icons.Default.CalendarMonth,
                             contentDescription = "Schedule"
@@ -84,13 +86,29 @@ fun MainScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onAiChatClick,
-                icon = { Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null) },
-                text = { Text("AI Chat") },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Column {
+                ExtendedFloatingActionButton(
+                    onClick = onAiChatClick,
+                    icon = { Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null) },
+                    text = { Text("AI Chat") },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                ExtendedFloatingActionButton(
+                    onClick = onGroupChatClick,
+                    icon = {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = null
+                        )
+                    },
+                    text = {
+                        Text("Group Chat")
+                    }
+                )
+            }
         }
     ) { padding ->
         if (isLoading) {
