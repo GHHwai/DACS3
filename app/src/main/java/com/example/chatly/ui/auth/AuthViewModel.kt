@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.chatly.data.model.User
+import com.google.firebase.auth.GoogleAuthProvider
 
 class AuthViewModel : ViewModel() {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
@@ -16,7 +17,20 @@ class AuthViewModel : ViewModel() {
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
+    fun firebaseAuthWithGoogle(idToken: String) {
 
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+
+        auth.signInWithCredential(credential)
+            .addOnCompleteListener { task ->
+
+                if (task.isSuccessful) {
+                    _authState.value = true
+                } else {
+                    _error.value = task.exception?.message
+                }
+            }
+    }
     fun login(email: String, password: String) {
         Log.d("AuthViewModel", "Attempt login with $email")
         _error.value = null

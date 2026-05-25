@@ -115,7 +115,7 @@ dependencies {
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
     implementation("com.google.firebase:firebase-ai")
-
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
     // Glide
     // Removed legacy Glide dependencies
 
@@ -127,4 +127,6 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
