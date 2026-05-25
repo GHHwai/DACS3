@@ -115,7 +115,7 @@ dependencies {
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
     implementation("com.google.firebase:firebase-ai")
-
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
     // Glide
     // Removed legacy Glide dependencies
 

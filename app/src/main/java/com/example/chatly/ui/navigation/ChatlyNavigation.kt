@@ -21,6 +21,20 @@ sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
     object Main : Screen("main")
+    object Schedule : Screen("schedule")
+
+    object AddSchedule : Screen("add_schedule")
+
+    object EditSchedule : Screen("edit_schedule/{scheduleId}") {
+        fun createRoute(scheduleId: String): String {
+            return "edit_schedule/$scheduleId"
+        }
+    }
+    object AddExam : Screen("add_exam")
+
+    object EditExam : Screen("edit_exam/{examId}") {
+        fun createRoute(examId: String) = "edit_exam/$examId"
+    }
     object Chat : Screen("chat/{userId}/{userName}/{userPhotoUrl}") {
         fun createRoute(userId: String, userName: String, userPhotoUrl: String) =
             "chat/$userId/$userName/$userPhotoUrl"
@@ -33,13 +47,8 @@ sealed class Screen(val route: String) {
     }
     object Groups : Screen("groups")
 
-    object GroupChat :
-        Screen("group_chat/{groupId}/{groupName}") {
-
-        fun createRoute(
-            groupId: String,
-            groupName: String
-        ) =
+    object GroupChat : Screen("group_chat/{groupId}/{groupName}") {
+        fun createRoute(groupId: String, groupName: String) =
             "group_chat/$groupId/$groupName"
     }
 }
@@ -49,7 +58,6 @@ fun ChatlyNavHost(
     navController: NavHostController,
     startDestination: String = Screen.Splash.route
 ) {
-    // Khởi tạo repository chuẩn từ Class bạn vừa viết
     val groupRepository = GroupChatRepository()
 
     val groupChatViewModel: GroupChatViewModel = viewModel(
@@ -119,9 +127,12 @@ fun ChatlyNavHost(
                         )
                     )
                 },
+                // --- ĐÃ ĐƯỢC GỘP ĐẦY ĐỦ CẢ NHÓM CHAT VÀ LỊCH HỌC Ở ĐÂY SẠCH LỖI ---
                 onAiChatClick = { navController.navigate(Screen.AiChat.route) },
                 onGroupChatClick = { navController.navigate(Screen.Groups.route) },
+                onScheduleClick = { navController.navigate(Screen.Schedule.route) },
                 onProfileClick = { navController.navigate(Screen.Profile.route) },
+                // -----------------------------------------------------------------
                 onLogout = {
                     navController.navigate(Screen.Greeting.route) {
                         popUpTo(Screen.Main.route) { inclusive = true }
@@ -150,6 +161,50 @@ fun ChatlyNavHost(
                 onUserClick = {
                     navController.navigate(Screen.UserDetail.createRoute(userId))
                 }
+            )
+        }
+
+        // Schedule
+        composable(Screen.Schedule.route) {
+            ScheduleScreen(
+                onAddStudyClick = { navController.navigate(Screen.AddSchedule.route) },
+                onAddExamClick = { navController.navigate(Screen.AddExam.route) },
+                onEditStudyClick = { id -> navController.navigate(Screen.EditSchedule.createRoute(id)) },
+                onEditExamClick = { id -> navController.navigate(Screen.EditExam.createRoute(id)) }
+            )
+        }
+
+        composable(Screen.AddSchedule.route) {
+            AddScheduleScreen(
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.EditSchedule.route,
+            arguments = listOf(navArgument("scheduleId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val scheduleId = backStackEntry.arguments?.getString("scheduleId") ?: ""
+            EditScheduleScreen(
+                scheduleId = scheduleId,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.AddExam.route) {
+            AddExamScreen(
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.EditExam.route,
+            arguments = listOf(navArgument("examId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val examId = backStackEntry.arguments?.getString("examId") ?: ""
+            EditExamScreen(
+                examId = examId,
+                onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -194,7 +249,7 @@ fun ChatlyNavHost(
         // Groups
         composable(Screen.Groups.route) {
             GroupsScreen(
-                viewModel = groupChatViewModel, // Truyền viewModel vào
+                viewModel = groupChatViewModel,
                 onGroupClick = { group ->
                     navController.navigate(
                         Screen.GroupChat.createRoute(group.id, group.groupName)
@@ -218,10 +273,9 @@ fun ChatlyNavHost(
             GroupChatScreen(
                 groupId = groupId,
                 groupName = groupName,
-                viewModel = groupChatViewModel, // Truyền viewModel vào
+                viewModel = groupChatViewModel,
                 onBackClick = { navController.popBackStack() }
             )
         }
-
     }
 }

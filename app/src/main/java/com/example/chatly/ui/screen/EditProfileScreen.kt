@@ -80,14 +80,41 @@ fun EditProfileScreen(
                 .imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            AsyncImage(
-                model = uiState.profileImageUri ?: uiState.photoUrl ?: Icons.Default.Person,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
+            when {
+
+                uiState.profileImageUri != null -> {
+
+                    AsyncImage(
+                        model = uiState.profileImageUri,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                !uiState.photoUrl.isNullOrEmpty() -> {
+
+                    AsyncImage(
+                        model = uiState.photoUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                else -> {
+
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier.size(120.dp)
+                    )
+                }
+            }
 
             TextButton(onClick = { pickImageLauncher.launch("image/*") }) {
                 Text("Change Photo")
