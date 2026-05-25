@@ -12,8 +12,8 @@ import com.example.chatly.ui.admin.screen.*
 import com.example.chatly.ui.admin.viewmodel.*
 import com.example.chatly.ui.chat.AiChatViewModel
 import com.example.chatly.data.repository.FirebaseAiChatRepository
-import com.example.chatly.ui.chat.GroupsScreen
-import com.example.chatly.ui.chat.GroupChatScreen
+import com.example.chatly.ui.screen.GroupsScreen
+import com.example.chatly.ui.screen.GroupChatScreen
 import com.example.chatly.data.repository.GroupChatRepository
 import com.example.chatly.ui.chat.GroupChatViewModel
 import com.example.chatly.data.repository.admin.AdminRepository

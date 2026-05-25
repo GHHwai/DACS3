@@ -1,5 +1,7 @@
-package com.example.chatly.ui.chat
+package com.example.chatly.ui.screen
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -34,6 +36,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.chatly.data.model.GroupMessage
+import com.example.chatly.ui.chat.GroupChatViewModel
 import com.example.chatly.ui.components.ChatlyTopAppBar
 import com.google.firebase.auth.FirebaseAuth
 
@@ -216,7 +219,7 @@ fun GroupChatScreen(
                                         style = MaterialTheme.typography.bodyMedium.copy(textDecoration = TextDecoration.Underline),
                                         modifier = Modifier.clickable {
                                             try {
-                                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(msg.fileUrl))
+                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(msg.fileUrl))
                                                 context.startActivity(intent)
                                             } catch (e: Exception) { e.printStackTrace() }
                                         }
