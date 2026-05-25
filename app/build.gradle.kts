@@ -12,7 +12,7 @@ plugins {
 
 android {
     namespace = "com.example.chatly"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.example.chatly"
         minSdk = 23

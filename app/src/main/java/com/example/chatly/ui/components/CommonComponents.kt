@@ -1,10 +1,13 @@
 package com.example.chatly.ui.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -15,9 +18,19 @@ fun ChatlyTopAppBar(
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     TopAppBar(
-        title = { Text(text = title, style = MaterialTheme.typography.titleLarge) },
-        navigationIcon = navigationIcon ?: {},
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+
+        navigationIcon = {
+            navigationIcon?.invoke()
+        },
+
         actions = actions,
+
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
             titleContentColor = MaterialTheme.colorScheme.onSurface
@@ -43,12 +56,15 @@ fun ChatlyButton(
     ) {
         if (isLoading) {
             CircularProgressIndicator(
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(22.dp),
                 color = MaterialTheme.colorScheme.onPrimary,
                 strokeWidth = 2.dp
             )
         } else {
-            Text(text = text, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleMedium
+            )
         }
     }
 }
@@ -61,19 +77,45 @@ fun ChatlyTextField(
     modifier: Modifier = Modifier,
     leadingIcon: ImageVector? = null,
     isError: Boolean = false,
-    errorMessage: String? = null
+    errorMessage: String? = null,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    trailingIcon: (@Composable (() -> Unit))? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    singleLine: Boolean = true
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
+
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { Text(text = label) },
+
+            label = {
+                Text(
+                    text = label,
+                    // Unicode-safe font rendering (Compose tự handle tốt rồi)
+                    maxLines = 1
+                )
+            },
+
             modifier = Modifier.fillMaxWidth(),
-            leadingIcon = leadingIcon?.let { { Icon(imageVector = it, contentDescription = null) } },
+
+            leadingIcon = leadingIcon?.let {
+                { Icon(imageVector = it, contentDescription = null) }
+            },
+
+            trailingIcon = trailingIcon,
+
             isError = isError,
-            singleLine = true,
-            shape = MaterialTheme.shapes.medium
+            singleLine = singleLine,
+
+            shape = MaterialTheme.shapes.medium,
+
+            visualTransformation = visualTransformation,
+            keyboardOptions = keyboardOptions,
+            keyboardActions = keyboardActions
         )
+
         if (isError && errorMessage != null) {
             Text(
                 text = errorMessage,

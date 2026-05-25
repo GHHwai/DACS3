@@ -8,11 +8,16 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -31,12 +36,16 @@ fun RegisterScreen(
     var mobile by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
     var isLoading by remember { mutableStateOf(false) }
 
-    LaunchedEffect(authState) {
+    LaunchedEffect(authState, error) {
+        if (authState || error != null) {
+            isLoading = false
+        }
+
         if (authState) {
             onRegisterSuccess()
         }
@@ -95,6 +104,19 @@ fun RegisterScreen(
             onValueChange = { password = it },
             label = "Password",
             leadingIcon = Icons.Default.Lock,
+            visualTransformation =
+                if (passwordVisible) VisualTransformation.None
+                else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        imageVector =
+                            if (passwordVisible) Icons.Default.VisibilityOff
+                            else Icons.Default.Visibility,
+                        contentDescription = null
+                    )
+                }
+            },
             modifier = Modifier.padding(bottom = 24.dp)
         )
 

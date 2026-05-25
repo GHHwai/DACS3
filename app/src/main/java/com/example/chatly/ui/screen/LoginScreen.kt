@@ -7,12 +7,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -32,7 +37,7 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
     var isLoading by remember { mutableStateOf(false) }
@@ -49,7 +54,11 @@ fun LoginScreen(
 
     val googleSignInClient: GoogleSignInClient =
         GoogleSignIn.getClient(context, gso)
-    LaunchedEffect(authState) {
+    LaunchedEffect(authState, error) {
+        if (authState || error != null) {
+            isLoading = false
+        }
+
         if (authState) {
             onLoginSuccess()
         }
@@ -101,7 +110,10 @@ fun LoginScreen(
         ChatlyTextField(
             value = email,
             onValueChange = { email = it },
-            label = "Email",
+            label =
+
+
+                "Email",
             leadingIcon = Icons.Default.Email,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -111,6 +123,19 @@ fun LoginScreen(
             onValueChange = { password = it },
             label = "Password",
             leadingIcon = Icons.Default.Lock,
+            visualTransformation =
+                if (passwordVisible) VisualTransformation.None
+                else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        imageVector =
+                            if (passwordVisible) Icons.Default.VisibilityOff
+                            else Icons.Default.Visibility,
+                        contentDescription = "Toggle password visibility"
+                    )
+                }
+            },
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
