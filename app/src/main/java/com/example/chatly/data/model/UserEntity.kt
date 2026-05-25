@@ -11,12 +11,14 @@ data class UserEntity(
     val mobile: String,
     val photoUrl: String?,
     val dob: String,
-    val gender: String
+    val gender: String,
+    val role: String = "user",
+    val status: String = "active"
 ) {
-    fun toUser(): User = User(uid, email, displayName, mobile, photoUrl, dob, gender)
+    fun toUser(): User = User(uid, email, displayName, mobile, photoUrl, dob, gender, role, status)
     companion object {
         fun fromUser(user: User) = UserEntity(
-            user.uid, user.email, user.displayName, user.mobile, user.photoUrl, user.dob, user.gender
+            user.uid, user.email, user.displayName, user.mobile, user.photoUrl, user.dob, user.gender, user.role, user.status
         )
     }
 }

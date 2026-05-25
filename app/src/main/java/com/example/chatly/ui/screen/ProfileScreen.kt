@@ -22,6 +22,7 @@ import com.example.chatly.ui.profile.ProfileViewModel
 @Composable
 fun ProfileScreen(
     onEditProfileClick: () -> Unit,
+    onAdminClick: () -> Unit,
     onBackClick: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
@@ -83,6 +84,17 @@ fun ProfileScreen(
                     text = "Edit Profile",
                     onClick = onEditProfileClick
                 )
+
+                if (uiState.role == "admin") {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = onAdminClick,
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                    ) {
+                        Text("Admin Dashboard")
+                    }
+                }
             }
         }
     }

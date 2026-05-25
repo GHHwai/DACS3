@@ -39,7 +39,7 @@ object CloudinaryUploader {
                 .addFormDataPart("upload_preset", unsignedPreset)
                 .build()
 
-            val url = "https://api.cloudinary.com/v1_1/db1dwaldu/image/upload"
+            val url = "https://api.cloudinary.com/v1_1/$cloudName/image/upload"
             val request = Request.Builder().url(url).post(requestBody).build()
             OkHttpClient().newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {

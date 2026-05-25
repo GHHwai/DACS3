@@ -11,5 +11,7 @@ data class User(
     val mobile: String = "",
     val photoUrl: String? = null,
     val dob: String = "",
-    val gender: String = ""
+    val gender: String = "",
+    val role: String = "user",
+    val status: String = "active"
 ) : Parcelable

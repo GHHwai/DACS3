@@ -1,4 +1,4 @@
-package com.example.chatly.viewmodel
+package com.example.chatly.ui.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

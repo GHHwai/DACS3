@@ -18,8 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.chatly.data.model.AiChatMessage
 import com.example.chatly.data.repository.FirebaseAiChatRepository
-import com.example.chatly.viewmodel.AiChatViewModel
-import kotlinx.coroutines.flow.collectLatest
+import com.example.chatly.ui.chat.AiChatViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,8 +45,12 @@ fun AiChatScreen(
 
         // Message List
         LazyColumn(
-            modifier = Modifier.weight(1f).padding(8.dp),
-            state = listState
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            contentPadding = PaddingValues(8.dp),
+            state = listState,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             items(messages) { message ->
                 ChatBubble(message)

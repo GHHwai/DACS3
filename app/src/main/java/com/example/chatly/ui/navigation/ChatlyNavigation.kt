@@ -8,8 +8,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.chatly.ui.screen.*
-import com.example.chatly.viewmodel.AiChatViewModel
+import com.example.chatly.ui.admin.screen.*
+import com.example.chatly.ui.admin.viewmodel.*
+import com.example.chatly.ui.chat.AiChatViewModel
 import com.example.chatly.data.repository.FirebaseAiChatRepository
+import com.example.chatly.data.repository.admin.AdminRepository
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -27,6 +30,14 @@ sealed class Screen(val route: String) {
     object UserDetail : Screen("user_detail/{userId}") {
         fun createRoute(userId: String) = "user_detail/$userId"
     }
+    
+    // Admin Routes
+    object AdminDashboard : Screen("admin_dashboard")
+    object AdminUsers : Screen("admin_users")
+    object AdminSystemData : Screen("admin_system_data")
+    object AdminDocuments : Screen("admin_documents")
+    object AdminChatbot : Screen("admin_chatbot")
+    object AdminChat : Screen("admin_chat")
 }
 
 @Composable
@@ -154,6 +165,7 @@ fun ChatlyNavHost(
         composable(Screen.Profile.route) {
             ProfileScreen(
                 onEditProfileClick = { navController.navigate(Screen.EditProfile.route) },
+                onAdminClick = { navController.navigate(Screen.AdminDashboard.route) },
                 onBackClick = { navController.popBackStack() }
             )
         }
@@ -161,6 +173,74 @@ fun ChatlyNavHost(
         // Edit Profile
         composable(Screen.EditProfile.route) {
             EditProfileScreen(
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // Admin
+        val adminRepository = AdminRepository()
+
+        composable(Screen.AdminDashboard.route) {
+            val adminDashboardViewModel: AdminDashboardViewModel = viewModel(
+                factory = AdminDashboardViewModel.Factory(adminRepository)
+            )
+            AdminDashboardScreen(
+                viewModel = adminDashboardViewModel,
+                onNavigateToUsers = { navController.navigate(Screen.AdminUsers.route) },
+                onNavigateToSystemData = { navController.navigate(Screen.AdminSystemData.route) },
+                onNavigateToDocuments = { navController.navigate(Screen.AdminDocuments.route) },
+                onNavigateToChatbot = { navController.navigate(Screen.AdminChatbot.route) },
+                onNavigateToChatSystem = { navController.navigate(Screen.AdminChat.route) },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.AdminUsers.route) {
+            val adminUsersViewModel: AdminUsersViewModel = viewModel(
+                factory = AdminUsersViewModel.Factory(adminRepository)
+            )
+            AdminUsersScreen(
+                viewModel = adminUsersViewModel,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.AdminSystemData.route) {
+            val adminSystemDataViewModel: AdminSystemDataViewModel = viewModel(
+                factory = AdminSystemDataViewModel.Factory(adminRepository)
+            )
+            AdminSystemDataScreen(
+                viewModel = adminSystemDataViewModel,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.AdminDocuments.route) {
+            val adminDocumentsViewModel: AdminDocumentsViewModel = viewModel(
+                factory = AdminDocumentsViewModel.Factory(adminRepository)
+            )
+            AdminDocumentsScreen(
+                viewModel = adminDocumentsViewModel,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.AdminChatbot.route) {
+            val adminChatbotViewModel: AdminChatbotViewModel = viewModel(
+                factory = AdminChatbotViewModel.Factory(adminRepository)
+            )
+            AdminChatbotScreen(
+                viewModel = adminChatbotViewModel,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.AdminChat.route) {
+            val adminChatViewModel: AdminChatViewModel = viewModel(
+                factory = AdminChatViewModel.Factory(adminRepository)
+            )
+            AdminChatScreen(
+                viewModel = adminChatViewModel,
                 onBackClick = { navController.popBackStack() }
             )
         }
