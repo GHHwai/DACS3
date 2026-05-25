@@ -88,25 +88,26 @@ class AuthViewModel : ViewModel() {
                 if (task.isSuccessful) {
                     val user = auth.currentUser
 
+                    val role = if (email.endsWith("@admin.com")) "admin" else "user"
                     val userObj = User(
                         uid = user?.uid ?: "",
                         email = user?.email ?: "",
                         displayName = displayName,
                         mobile = mobile,
-                        photoUrl = user?.photoUrl.toString()
-
+                        photoUrl = user?.photoUrl.toString(),
+                        role = role
                     )
                     FirebaseFirestore.getInstance()
                         .collection("users")
                         .document(userObj.uid)
                         .set(userObj)
                         .addOnSuccessListener {
-                            _userRole.value = "user"
+                            _userRole.value = role
                             _authState.value = true
                         }
                         .addOnFailureListener { e ->
                             _error.value = "Failed to save user: ${e.localizedMessage}"
-                            _userRole.value = "user"
+                            _userRole.value = role
                             _authState.value = true // Even if failed to save to firestore, auth succeeded
                         }
                 } else {

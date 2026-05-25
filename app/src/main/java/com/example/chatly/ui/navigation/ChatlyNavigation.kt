@@ -53,7 +53,9 @@ sealed class Screen(val route: String) {
 
     // Admin Routes
     object AdminDashboard : Screen("admin_dashboard")
-    object AdminUsers : Screen("admin_users")
+    object AdminUsers : Screen("admin_users?status={status}") {
+        fun createRoute(status: String = "all") = "admin_users?status=$status"
+    }
     object AdminSystemData : Screen("admin_system_data")
     object AdminDocuments : Screen("admin_documents")
     object AdminChatbot : Screen("admin_chatbot")
@@ -315,7 +317,7 @@ fun ChatlyNavHost(
             )
             AdminDashboardScreen(
                 viewModel = adminDashboardViewModel,
-                onNavigateToUsers = { navController.navigate(Screen.AdminUsers.route) },
+                onNavigateToUsers = { status -> navController.navigate(Screen.AdminUsers.createRoute(status)) },
                 onNavigateToSystemData = { navController.navigate(Screen.AdminSystemData.route) },
                 onNavigateToDocuments = { navController.navigate(Screen.AdminDocuments.route) },
                 onNavigateToChatbot = { navController.navigate(Screen.AdminChatbot.route) },
@@ -330,12 +332,17 @@ fun ChatlyNavHost(
             )
         }
 
-        composable(Screen.AdminUsers.route) {
+        composable(
+            route = Screen.AdminUsers.route,
+            arguments = listOf(navArgument("status") { defaultValue = "all"; type = NavType.StringType })
+        ) { backStackEntry ->
+            val status = backStackEntry.arguments?.getString("status") ?: "all"
             val adminUsersViewModel: AdminUsersViewModel = viewModel(
                 factory = AdminUsersViewModel.Factory(adminRepository)
             )
             AdminUsersScreen(
                 viewModel = adminUsersViewModel,
+                initialFilter = status,
                 onBackClick = { navController.popBackStack() }
             )
         }

@@ -19,7 +19,7 @@ import com.google.firebase.auth.FirebaseAuth
 @Composable
 fun AdminDashboardScreen(
     viewModel: AdminDashboardViewModel,
-    onNavigateToUsers: () -> Unit,
+    onNavigateToUsers: (String) -> Unit,
     onNavigateToSystemData: () -> Unit,
     onNavigateToDocuments: () -> Unit,
     onNavigateToChatbot: () -> Unit,
@@ -71,18 +71,10 @@ fun AdminDashboardScreen(
                 ) {
                     item {
                         StatCard(
-                            title = "Users",
+                            title = "User Management",
                             value = "${stats?.totalUsers ?: 0}",
                             icon = Icons.Default.People,
-                            onClick = onNavigateToUsers
-                        )
-                    }
-                    item {
-                        StatCard(
-                            title = "Active Users",
-                            value = "${stats?.activeUsers ?: 0}",
-                            icon = Icons.Default.PersonSearch,
-                            onClick = onNavigateToUsers
+                            onClick = { onNavigateToUsers("all") }
                         )
                     }
                     item {
