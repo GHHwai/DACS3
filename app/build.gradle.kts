@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.gms.google.services)
-    alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.compose)
@@ -114,7 +113,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
-    implementation("com.google.firebase:firebase-vertexai:16.0.2")
+    implementation("com.google.firebase:firebase-ai")
     implementation("com.google.android.gms:play-services-auth:21.2.0")
     // Glide
     // Removed legacy Glide dependencies
