@@ -1,8 +1,7 @@
 package com.example.chatly.data.repository
 
 import com.google.firebase.Firebase
-import com.google.firebase.ai.ai
-import com.google.firebase.ai.type.GenerativeBackend
+import com.google.firebase.vertexai.vertexAI
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.chatly.data.model.AiChatMessage
@@ -29,8 +28,7 @@ class FirebaseAiChatRepository(
 
     // Model Firebase AI
     private val model by lazy {
-        Firebase.ai(backend = GenerativeBackend.googleAI())
-            .generativeModel("gemini-1.5-flash")
+        Firebase.vertexAI.generativeModel("gemini-1.5-flash")
     }
 
     suspend fun getAiResponse(userMessage: String): Result<String> {

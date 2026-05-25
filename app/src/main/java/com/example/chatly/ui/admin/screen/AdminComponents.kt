@@ -12,25 +12,22 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.chatly.ui.components.ChatlyTopAppBar
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminTopBar(
     title: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
-    TopAppBar(
-        title = { Text(text = title, fontWeight = FontWeight.Bold) },
+    ChatlyTopAppBar(
+        title = title,
         navigationIcon = {
             IconButton(onClick = onBackClick) {
                 Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            titleContentColor = MaterialTheme.colorScheme.onPrimary,
-            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
-        )
+        actions = actions
     )
 }
 

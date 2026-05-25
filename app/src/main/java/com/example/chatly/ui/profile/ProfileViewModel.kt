@@ -112,4 +112,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     fun resetSaveStatus() {
         _uiState.update { it.copy(isSaved = false) }
     }
+
+    fun logout() {
+        com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+    }
 }

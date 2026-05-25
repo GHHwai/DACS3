@@ -39,8 +39,10 @@ sealed class Screen(val route: String) {
         fun createRoute(examId: String) = "edit_exam/$examId"
     }
     object Chat : Screen("chat/{userId}/{userName}/{userPhotoUrl}") {
-        fun createRoute(userId: String, userName: String, userPhotoUrl: String) =
-            "chat/$userId/$userName/$userPhotoUrl"
+        fun createRoute(userId: String, userName: String, userPhotoUrl: String): String {
+            val encodedUrl = java.net.URLEncoder.encode(userPhotoUrl, "UTF-8")
+            return "chat/$userId/$userName/$encodedUrl"
+        }
     }
     object AiChat : Screen("ai_chat")
     object Profile : Screen("profile")
@@ -90,6 +92,11 @@ fun ChatlyNavHost(
                     navController.navigate(Screen.Main.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
+                },
+                onNavigationAdmin = {
+                    navController.navigate(Screen.AdminDashboard.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
                 }
             )
         }
@@ -105,8 +112,9 @@ fun ChatlyNavHost(
         // Login
         composable(Screen.Login.route) {
             LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate(Screen.Main.route) {
+                onLoginSuccess = { role ->
+                    val dest = if (role == "admin") Screen.AdminDashboard.route else Screen.Main.route
+                    navController.navigate(dest) {
                         popUpTo(Screen.Greeting.route) { inclusive = true }
                     }
                 },
@@ -117,8 +125,9 @@ fun ChatlyNavHost(
         // Register
         composable(Screen.Register.route) {
             RegisterScreen(
-                onRegisterSuccess = {
-                    navController.navigate(Screen.Main.route) {
+                onRegisterSuccess = { role ->
+                    val dest = if (role == "admin") Screen.AdminDashboard.route else Screen.Main.route
+                    navController.navigate(dest) {
                         popUpTo(Screen.Greeting.route) { inclusive = true }
                     }
                 },
@@ -162,7 +171,10 @@ fun ChatlyNavHost(
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: ""
             val userName = backStackEntry.arguments?.getString("userName") ?: ""
-            val userPhotoUrl = backStackEntry.arguments?.getString("userPhotoUrl") ?: ""
+            val userPhotoUrl = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("userPhotoUrl") ?: "none",
+                "UTF-8"
+            )
             ChatScreen(
                 userId = userId,
                 userName = userName,
@@ -246,7 +258,12 @@ fun ChatlyNavHost(
             ProfileScreen(
                 onEditProfileClick = { navController.navigate(Screen.EditProfile.route) },
                 onAdminClick = { navController.navigate(Screen.AdminDashboard.route) },
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onLogout = {
+                    navController.navigate(Screen.Greeting.route) {
+                        popUpTo(Screen.Main.route) { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -303,6 +320,12 @@ fun ChatlyNavHost(
                 onNavigateToDocuments = { navController.navigate(Screen.AdminDocuments.route) },
                 onNavigateToChatbot = { navController.navigate(Screen.AdminChatbot.route) },
                 onNavigateToChatSystem = { navController.navigate(Screen.AdminChat.route) },
+                onLogout = {
+                    com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+                    navController.navigate(Screen.Greeting.route) {
+                        popUpTo(Screen.AdminDashboard.route) { inclusive = true }
+                    }
+                },
                 onBackClick = { navController.popBackStack() }
             )
         }

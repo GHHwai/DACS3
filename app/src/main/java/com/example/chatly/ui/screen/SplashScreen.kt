@@ -17,12 +17,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.chatly.R
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.tasks.await
 
 @Composable
 fun SplashScreen(
     onNavigationNext: () -> Unit,
-    onNavigationMain: () -> Unit
+    onNavigationMain: () -> Unit,
+    onNavigationAdmin: () -> Unit
 ) {
     val scale = remember { Animatable(0f) }
     val alpha = remember { Animatable(0f) }
@@ -42,9 +45,20 @@ fun SplashScreen(
             animationSpec = tween(durationMillis = 500)
         )
         delay(1500)
-        
-        if (FirebaseAuth.getInstance().currentUser != null) {
-            onNavigationMain()
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser != null) {
+            try {
+                val doc = FirebaseFirestore.getInstance().collection("users")
+                    .document(currentUser.uid).get().await()
+                val role = doc.getString("role") ?: "user"
+                if (role == "admin") {
+                    onNavigationAdmin()
+                } else {
+                    onNavigationMain()
+                }
+            } catch (e: Exception) {
+                onNavigationMain()
+            }
         } else {
             onNavigationNext()
         }

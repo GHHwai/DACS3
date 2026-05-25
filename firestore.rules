@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user is the owner of the data
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId);
+
+      // Sub-collections for schedules
+      match /study_schedules/{scheduleId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /exam_schedules/{examId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // One-on-one messages
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() &&
+        (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
+      allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.senderId == request.auth.uid;
+    }
+
+    // Groups
+    match /groups/{groupId} {
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.members;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.members;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.createdBy;
+    }
+
+    // Group Messages
+    match /group_messages/{messageId} {
+      allow read: if isAuthenticated() &&
+        get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.members.hasAny([request.auth.uid]);
+      allow create: if isAuthenticated() &&
+        get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.members.hasAny([request.auth.uid]);
+      allow update, delete: if isAuthenticated() && resource.data.senderId == request.auth.uid;
+    }
+
+    // AI Chat Logs (Admin only)
+    match /chatbot_logs/{logId} {
+      allow create: if isAuthenticated();
+      allow read, write: if isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // System Data & Documents (Admin only)
+    match /system_data/{dataId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /documents/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+  }
+}

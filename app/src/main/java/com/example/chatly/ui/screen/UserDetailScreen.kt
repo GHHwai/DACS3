@@ -3,7 +3,7 @@ package com.example.chatly.ui.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.chatly.data.model.User
 import com.example.chatly.ui.components.ChatlyTopAppBar
+import com.example.chatly.ui.components.ProfileInfoItem
 import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
@@ -43,7 +44,7 @@ fun UserDetailScreen(
                 title = "User Details",
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )

@@ -27,13 +27,14 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,
-    onLoginSuccess: () -> Unit,
+    onLoginSuccess: (String) -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     
     val authState by viewModel.authState.collectAsStateWithLifecycle()
+    val userRole by viewModel.userRole.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -49,9 +50,9 @@ fun LoginScreen(
 
     val googleSignInClient: GoogleSignInClient =
         GoogleSignIn.getClient(context, gso)
-    LaunchedEffect(authState) {
-        if (authState) {
-            onLoginSuccess()
+    LaunchedEffect(authState, userRole) {
+        if (authState && userRole != null) {
+            onLoginSuccess(userRole!!)
         }
     }
     val launcher = rememberLauncherForActivityResult(

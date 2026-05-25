@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.chatly.ui.admin.viewmodel.AdminDashboardViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,13 +24,27 @@ fun AdminDashboardScreen(
     onNavigateToDocuments: () -> Unit,
     onNavigateToChatbot: () -> Unit,
     onNavigateToChatSystem: () -> Unit,
+    onLogout: () -> Unit,
     onBackClick: () -> Unit
 ) {
     val stats by viewModel.stats.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
     Scaffold(
-        topBar = { AdminTopBar(title = "Admin Dashboard", onBackClick = onBackClick) }
+        topBar = {
+            AdminTopBar(
+                title = "Admin Dashboard",
+                onBackClick = onBackClick,
+                actions = {
+                    IconButton(onClick = onLogout) {
+                        Icon(
+                            Icons.Default.Logout,
+                            contentDescription = "Logout"
+                        )
+                    }
+                }
+            )
+        }
     ) { paddingValues ->
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

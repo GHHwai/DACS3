@@ -5,10 +5,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +20,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.chatly.data.model.AiChatMessage
 import com.example.chatly.data.repository.FirebaseAiChatRepository
 import com.example.chatly.ui.chat.AiChatViewModel
+import com.example.chatly.ui.components.ChatBubble
+import com.example.chatly.ui.components.ChatlyTopAppBar
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,72 +35,84 @@ fun AiChatScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Header
-        TopAppBar(
-            title = { Text("AI Chat") },
-            navigationIcon = {
-                IconButton(onClick = onBackClick) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+    Scaffold(
+        topBar = {
+            ChatlyTopAppBar(
+                title = "AI Chat Assistant",
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
                 }
-            }
-        )
-
-        // Message List
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            contentPadding = PaddingValues(8.dp),
-            state = listState,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            items(messages) { message ->
-                ChatBubble(message)
-            }
+            )
         }
-
-        // Input
-        Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            BasicTextField(
-                value = input,
-                onValueChange = { input = it },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .imePadding()
+        ) {
+            // Message List
+            LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .background(Color.LightGray, shape = MaterialTheme.shapes.small)
-                    .padding(8.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = {
-                if (input.isNotBlank()) {
-                    viewModel.sendUserMessage(input)
-                    input = ""
-                    scope.launch { listState.animateScrollToItem(messages.size) }
+                    .fillMaxWidth(),
+                contentPadding = PaddingValues(16.dp),
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(messages) { message ->
+                    ChatBubble(text = message.content, isMine = message.isMine)
                 }
-            }) {
-                Text("Send")
             }
-        }
-    }
-}
 
-@Composable
-fun ChatBubble(message: AiChatMessage) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = if (message.isMine) Arrangement.End else Arrangement.Start
-    ) {
-        Box(
-            modifier = Modifier
-                .background(
-                    if (message.isMine) Color(0xFF4CAF50) else Color(0xFFE0E0E0),
-                    shape = MaterialTheme.shapes.medium
-                )
-                .padding(8.dp)
-        ) {
-            Text(text = message.content, color = if (message.isMine) Color.White else Color.Black)
+            // Input Area
+            Surface(
+                tonalElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextField(
+                        value = input,
+                        onValueChange = { input = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text("Ask me anything...") },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            disabledContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        )
+                    )
+                    IconButton(
+                        onClick = {
+                            if (input.isNotBlank()) {
+                                viewModel.sendUserMessage(input)
+                                input = ""
+                                scope.launch {
+                                    if (messages.isNotEmpty()) {
+                                        listState.animateScrollToItem(messages.size)
+                                    }
+                                }
+                            }
+                        },
+                        enabled = input.isNotBlank()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Send,
+                            contentDescription = "Send",
+                            tint = if (input.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
+                    }
+                }
+            }
         }
     }
 }

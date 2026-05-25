@@ -14,6 +14,9 @@ class AuthViewModel : ViewModel() {
     private val _authState = MutableStateFlow(auth.currentUser != null)
     val authState: StateFlow<Boolean> = _authState
 
+    private val _userRole = MutableStateFlow<String?>(null)
+    val userRole: StateFlow<String?> = _userRole
+
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
@@ -25,7 +28,23 @@ class AuthViewModel : ViewModel() {
             .addOnCompleteListener { task ->
 
                 if (task.isSuccessful) {
-                    _authState.value = true
+                    val uid = auth.currentUser?.uid
+                    if (uid != null) {
+                        FirebaseFirestore.getInstance().collection("users").document(uid)
+                            .get()
+                            .addOnSuccessListener { doc ->
+                                val role = doc.getString("role") ?: "user"
+                                _userRole.value = role
+                                _authState.value = true
+                            }
+                            .addOnFailureListener {
+                                _userRole.value = "user"
+                                _authState.value = true
+                            }
+                    } else {
+                        _userRole.value = "user"
+                        _authState.value = true
+                    }
                 } else {
                     _error.value = task.exception?.message
                 }
@@ -38,7 +57,23 @@ class AuthViewModel : ViewModel() {
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     Log.d("AuthViewModel", "Login success")
-                    _authState.value = true
+                    val uid = auth.currentUser?.uid
+                    if (uid != null) {
+                        FirebaseFirestore.getInstance().collection("users").document(uid)
+                            .get()
+                            .addOnSuccessListener { doc ->
+                                val role = doc.getString("role") ?: "user"
+                                _userRole.value = role
+                                _authState.value = true
+                            }
+                            .addOnFailureListener {
+                                _userRole.value = "user"
+                                _authState.value = true
+                            }
+                    } else {
+                        _userRole.value = "user"
+                        _authState.value = true
+                    }
                 } else {
                     Log.e("AuthViewModel", "Login failure", task.exception)
                     _error.value = task.exception?.localizedMessage ?: "Login failed"
@@ -52,8 +87,6 @@ class AuthViewModel : ViewModel() {
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val user = auth.currentUser
-                    _authState.value = true
-
 
                     val userObj = User(
                         uid = user?.uid ?: "",
@@ -67,8 +100,14 @@ class AuthViewModel : ViewModel() {
                         .collection("users")
                         .document(userObj.uid)
                         .set(userObj)
+                        .addOnSuccessListener {
+                            _userRole.value = "user"
+                            _authState.value = true
+                        }
                         .addOnFailureListener { e ->
                             _error.value = "Failed to save user: ${e.localizedMessage}"
+                            _userRole.value = "user"
+                            _authState.value = true // Even if failed to save to firestore, auth succeeded
                         }
                 } else {
                     _error.value = task.exception?.localizedMessage ?: "Registration failed"
@@ -78,6 +117,7 @@ class AuthViewModel : ViewModel() {
 
     fun logout() {
         auth.signOut()
+        _userRole.value = null
         _authState.value = false
     }
 
