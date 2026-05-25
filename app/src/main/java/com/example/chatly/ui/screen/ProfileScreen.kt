@@ -3,8 +3,9 @@ package com.example.chatly.ui.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,12 +18,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.chatly.ui.components.ChatlyButton
 import com.example.chatly.ui.components.ChatlyTopAppBar
+import com.example.chatly.ui.components.ProfileInfoItem
 import com.example.chatly.ui.profile.ProfileViewModel
 
 @Composable
 fun ProfileScreen(
     onEditProfileClick: () -> Unit,
+    onAdminClick: () -> Unit,
     onBackClick: () -> Unit,
+    onLogout: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -37,7 +41,7 @@ fun ProfileScreen(
                 title = "Profile",
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -94,28 +98,35 @@ fun ProfileScreen(
                     text = "Edit Profile",
                     onClick = onEditProfileClick
                 )
+
+                if (uiState.role == "admin") {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(
+                        onClick = onAdminClick,
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.tertiary
+                        )
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Admin Dashboard")
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                TextButton(
+                    onClick = {
+                        viewModel.logout()
+                        onLogout()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Logout", color = MaterialTheme.colorScheme.error)
+                }
             }
         }
-    }
-}
-
-@Composable
-fun ProfileInfoItem(label: String, value: String) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-        HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
     }
 }

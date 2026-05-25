@@ -9,7 +9,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
@@ -30,6 +30,7 @@ import com.example.chatly.data.remote.FirebaseService
 import com.example.chatly.data.repository.ChatRepository
 import com.example.chatly.ui.chat.ChatViewModel
 import com.example.chatly.ui.chat.ChatViewModelFactory
+import com.example.chatly.ui.components.ChatBubble
 import com.example.chatly.ui.components.ChatlyTopAppBar
 import com.google.firebase.auth.FirebaseAuth
 import java.util.*
@@ -75,7 +76,7 @@ fun ChatScreen(
                 title = userName,
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -108,7 +109,7 @@ fun ChatScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(messages, key = { it.messageId }) { message ->
-                    MessageBubble(message = message, isMine = message.senderId == currentUserId)
+                    ChatBubble(text = message.content, isMine = message.senderId == currentUserId)
                 }
             }
 
@@ -129,32 +130,6 @@ fun ChatScreen(
                         messageText = ""
                     }
                 }
-            )
-        }
-    }
-}
-
-@Composable
-fun MessageBubble(message: Message, isMine: Boolean) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        contentAlignment = if (isMine) Alignment.CenterEnd else Alignment.CenterStart
-    ) {
-        Surface(
-            color = if (isMine) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-            shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (isMine) 16.dp else 0.dp,
-                bottomEnd = if (isMine) 0.dp else 16.dp
-            )
-        ) {
-            Text(
-                text = message.content,
-                modifier = Modifier.padding(12.dp),
-                color = if (isMine) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

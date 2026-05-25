@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.chatly.data.model.GroupMessage
+import com.example.chatly.ui.components.ChatlyTopAppBar
 import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,14 +98,11 @@ fun GroupChatScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(text = groupName) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color(0xFFE6F2FF)
-                ),
+            ChatlyTopAppBar(
+                title = groupName,
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -112,16 +110,15 @@ fun GroupChatScreen(
                         viewModel.getGroupMembersDetail(currentGroupMembers)
                         showMembersDialog = true
                     }) {
-                        Icon(imageVector = Icons.Default.People, contentDescription = "Xem thành viên")
+                        Icon(imageVector = Icons.Default.People, contentDescription = "View Members")
                     }
 
                     if (isStillInGroup) {
                         Box {
                             IconButton(onClick = { showMenu = true }) {
-                                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Tùy chọn")
+                                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Options")
                             }
 
-                            // --- ĐÃ ĐỔI MÀU MENU THÀNH GRADIENT TÍM XANH CÓ VIỀN NEON ---
                             DropdownMenu(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false },
@@ -131,22 +128,22 @@ fun GroupChatScreen(
                                     .background(brush = menuBrush, shape = RoundedCornerShape(12.dp))
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Mời thêm thành viên", color = Color.White) },
+                                    text = { Text("Invite members", color = Color.White) },
                                     onClick = { showMenu = false; showInviteDialog = true }
                                 )
                                 if (isCreator) {
                                     DropdownMenuItem(
-                                        text = { Text("Xóa thành viên", color = Color(0xFFFFA500)) },
+                                        text = { Text("Remove members", color = Color(0xFFFFA500)) },
                                         onClick = { showMenu = false; showRemoveDialog = true }
                                     )
                                 }
                                 DropdownMenuItem(
-                                    text = { Text("Rời khỏi nhóm", color = Color(0xFFFF4D4D)) },
+                                    text = { Text("Leave group", color = Color(0xFFFF4D4D)) },
                                     onClick = {
                                         showMenu = false
                                         val leaveNotification = GroupMessage(
                                             id = System.currentTimeMillis().toString(),
-                                            groupId = groupId, senderName = "Hệ thống", content = "$currentUserName đã rời khỏi nhóm"
+                                            groupId = groupId, senderName = "System", content = "$currentUserName left the group"
                                         )
                                         viewModel.sendMessage(leaveNotification)
 

@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.chatly.data.model.Group
+import com.example.chatly.ui.components.ChatlyTopAppBar
 import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,16 +40,16 @@ fun GroupsScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(text = "Group") },
+            ChatlyTopAppBar(
+                title = "Groups",
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     IconButton(onClick = { showDialog = true }) {
-                        Icon(imageVector = Icons.Filled.Add, contentDescription = "Thêm nhóm")
+                        Icon(imageVector = Icons.Filled.Add, contentDescription = "Add Group")
                     }
                 }
             )

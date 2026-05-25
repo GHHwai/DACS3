@@ -1,3 +1,5 @@
+package com.example.chatly.ui.components
+
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox

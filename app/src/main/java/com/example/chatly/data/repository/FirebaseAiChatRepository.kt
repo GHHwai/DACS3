@@ -1,13 +1,18 @@
 package com.example.chatly.data.repository
 
 import com.google.firebase.Firebase
-import com.google.firebase.ai.ai
-import com.google.firebase.ai.type.GenerativeBackend
+import com.google.firebase.vertexai.vertexAI
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.example.chatly.data.model.AiChatMessage
+import com.example.chatly.data.model.admin.ChatbotLog
 
-class FirebaseAiChatRepository {
+class FirebaseAiChatRepository(
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+) {
 
-    // Lưu lịch sử chat
+    // Lưu lịch sử chat (cho session hiện tại)
     private val chatHistory = mutableListOf<AiChatMessage>()
 
     // Prompt hệ thống
@@ -23,11 +28,11 @@ class FirebaseAiChatRepository {
 
     // Model Firebase AI
     private val model by lazy {
-        Firebase.ai(backend = GenerativeBackend.googleAI())
-            .generativeModel("gemini-3-flash-preview")
+        Firebase.vertexAI.generativeModel("gemini-1.5-flash")
     }
 
     suspend fun getAiResponse(userMessage: String): Result<String> {
+        val userId = auth.currentUser?.uid ?: "anonymous"
         return try {
             // Ghép prompt + lịch sử hội thoại
             val historyText = chatHistory.joinToString("\n") { msg ->
@@ -40,13 +45,33 @@ class FirebaseAiChatRepository {
             val response = model.generateContent(finalPrompt)
             val aiText = response.text ?: "AI không trả lời được"
 
-            // Cập nhật lịch sử
+            // Cập nhật lịch sử session
             chatHistory.add(AiChatMessage(content = userMessage, isMine = true))
             chatHistory.add(AiChatMessage(content = aiText, isMine = false))
+
+            // Lưu log vào Firestore cho Admin
+            val log = ChatbotLog(
+                userId = userId,
+                query = userMessage,
+                response = aiText,
+                status = "success",
+                timestamp = System.currentTimeMillis()
+            )
+            firestore.collection("chatbot_logs").add(log)
 
             Result.success(aiText)
         } catch (e: Exception) {
             e.printStackTrace()
+            // Log lỗi vào Firestore
+            val errorLog = ChatbotLog(
+                userId = userId,
+                query = userMessage,
+                response = "Error",
+                status = "error",
+                errorMessage = e.localizedMessage,
+                timestamp = System.currentTimeMillis()
+            )
+            firestore.collection("chatbot_logs").add(errorLog)
             Result.failure(e)
         }
     }

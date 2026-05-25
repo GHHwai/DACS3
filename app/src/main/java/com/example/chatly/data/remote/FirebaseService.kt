@@ -61,7 +61,6 @@ class FirebaseService(
     fun listenForMessages(chatUserId: String, myUserId: String): Flow<List<Message>> = callbackFlow {
         val listener = firestore.collection("messages")
             .whereIn("senderId", listOf(myUserId, chatUserId))
-            .whereIn("receiverId", listOf(myUserId, chatUserId))
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
                     close(e)
@@ -69,6 +68,7 @@ class FirebaseService(
                 }
                 if (snapshot != null) {
                     val messages = snapshot.toObjects(Message::class.java)
+                        .filter { it.receiverId == myUserId || it.receiverId == chatUserId }
                         .sortedBy { it.timestamp }
                         .map { it.copy(isMine = it.senderId == myUserId) }
                     trySend(messages)

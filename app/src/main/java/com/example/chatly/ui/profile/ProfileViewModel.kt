@@ -19,7 +19,9 @@ data class ProfileUiState(
     val profileImageUri: Uri? = null,
     val isLoading: Boolean = true,
     val error: String? = null,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val role: String = "user",
+    val status: String = "active"
 )
 
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
@@ -41,6 +43,8 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                             photoUrl = it.photoUrl,
                             dob = it.dob ?: "",
                             gender = it.gender ?: "",
+                            role = it.role,
+                            status = it.status,
                             isLoading = false
                         )
                     } ?: state.copy(isLoading = false)
@@ -88,7 +92,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             mobile = currentState.mobile,
             photoUrl = currentState.photoUrl,
             dob = currentState.dob,
-            gender = currentState.gender
+            gender = currentState.gender,
+            role = currentState.role,
+            status = currentState.status
         )
         
         _uiState.update { it.copy(isLoading = true, error = null) }
@@ -105,5 +111,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     
     fun resetSaveStatus() {
         _uiState.update { it.copy(isSaved = false) }
+    }
+
+    fun logout() {
+        com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
     }
 }

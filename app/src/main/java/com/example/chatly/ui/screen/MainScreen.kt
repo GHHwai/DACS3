@@ -1,15 +1,18 @@
 package com.example.chatly.ui.screen
 
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,7 +20,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
 import com.example.chatly.data.model.User
 import com.example.chatly.ui.components.ChatlyTopAppBar
@@ -29,10 +35,8 @@ import androidx.compose.material.icons.filled.CalendarMonth
 fun MainScreen(
     onUserClick: (User) -> Unit,
     onAiChatClick: () -> Unit,
-    // --- ĐÃ GỘP CẢ 2 THAM SỐ VÀO ĐÂY AN TOÀN, SẠCH KÝ HIỆU GIT ---
     onGroupChatClick: () -> Unit,
     onScheduleClick: () -> Unit,
-    // -----------------------------------------------------------
     onProfileClick: () -> Unit,
     onLogout: () -> Unit,
     viewModel: com.example.chatly.ui.main.MainViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
@@ -45,68 +49,34 @@ fun MainScreen(
             ChatlyTopAppBar(
                 title = "Chatly",
                 actions = {
-                    IconButton(
-                        onClick = onScheduleClick
-                    ) {
-                        Icon(
-                            Icons.Default.CalendarMonth,
-                            contentDescription = "Schedule"
-                        )
+                    IconButton(onClick = onScheduleClick) {
+                        Icon(Icons.Default.CalendarMonth, contentDescription = "Schedule")
                     }
-
-                    // Profile
                     IconButton(onClick = onProfileClick) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = "Profile"
-                        )
+                        Icon(Icons.Default.Person, contentDescription = "Profile")
                     }
-
-                    // Settings
-                    IconButton(onClick = {
-                        // TODO: mở settings screen
-                    }) {
-                        Icon(
-                            Icons.Default.Settings,
-                            contentDescription = "Settings"
-                        )
-                    }
-
-                    // Logout
-                    IconButton(onClick = {
-                        viewModel.logout()
-                        onLogout()
-                    }) {
-                        Icon(
-                            Icons.Default.Logout,
-                            contentDescription = "Logout"
-                        )
+                    IconButton(onClick = { viewModel.logout(); onLogout() }) {
+                        Icon(Icons.Default.Logout, contentDescription = "Logout")
                     }
                 }
             )
         },
         floatingActionButton = {
-            Column {
-                ExtendedFloatingActionButton(
+            Column(horizontalAlignment = Alignment.End) {
+                SmallFloatingActionButton(
                     onClick = onAiChatClick,
-                    icon = { Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null) },
-                    text = { Text("AI Chat") },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "AI Chat")
+                }
+                Spacer(modifier = Modifier.height(12.dp))
                 ExtendedFloatingActionButton(
                     onClick = onGroupChatClick,
-                    icon = {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = null
-                        )
-                    },
-                    text = {
-                        Text("Group Chat")
-                    }
+                    icon = { Icon(Icons.Default.Groups, contentDescription = null) },
+                    text = { Text("Groups") },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             }
         }
@@ -116,13 +86,17 @@ fun MainScreen(
                 CircularProgressIndicator()
             }
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                items(users, key = { it.uid }) { user ->
-                    UserItem(user = user, onClick = { onUserClick(user) })
+            Column(modifier = Modifier.padding(padding)) {
+                Text(
+                    text = "Direct Messages",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(users, key = { it.uid }) { user ->
+                        UserItem(user = user, onClick = { onUserClick(user) })
+                    }
                 }
             }
         }
@@ -131,32 +105,40 @@ fun MainScreen(
 
 @Composable
 fun UserItem(user: User, onClick: () -> Unit) {
-    Row(
+    Surface(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
     ) {
-        AsyncImage(
-            model = user.photoUrl ?: Icons.Default.Person,
-            contentDescription = null,
-            modifier = Modifier
-                .size(50.dp)
-                .clip(CircleShape),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column {
-            Text(
-                text = user.displayName ?: "Unknown",
-                style = MaterialTheme.typography.titleMedium
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                model = user.photoUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentScale = ContentScale.Crop,
+                error = painterResource(com.example.chatly.R.drawable.logo_icon) // Fallback icon
             )
-            Text(
-                text = user.email,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = user.displayName?.ifEmpty { "User" } ?: "User",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+                Text(
+                    text = user.email,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

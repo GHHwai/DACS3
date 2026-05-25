@@ -29,7 +29,7 @@ import com.example.chatly.ui.components.ChatlyTextField
 @Composable
 fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
-    onRegisterSuccess: () -> Unit,
+    onRegisterSuccess: (String) -> Unit,
     viewModel: AuthViewModel = viewModel()
 ) {
     var name by remember { mutableStateOf("") }
@@ -38,16 +38,13 @@ fun RegisterScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     val authState by viewModel.authState.collectAsStateWithLifecycle()
+    val userRole by viewModel.userRole.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
     var isLoading by remember { mutableStateOf(false) }
 
-    LaunchedEffect(authState, error) {
-        if (authState || error != null) {
-            isLoading = false
-        }
-
-        if (authState) {
-            onRegisterSuccess()
+    LaunchedEffect(authState, userRole) {
+        if (authState && userRole != null) {
+            onRegisterSuccess(userRole!!)
         }
     }
 
