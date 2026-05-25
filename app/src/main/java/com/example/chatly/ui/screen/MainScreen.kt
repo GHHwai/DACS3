@@ -27,6 +27,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 fun MainScreen(
     onUserClick: (User) -> Unit,
     onAiChatClick: () -> Unit,
+    onGroupChatClick: () -> Unit,
     onProfileClick: () -> Unit,
     onLogout: () -> Unit,
     viewModel: com.example.chatly.ui.main.MainViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
@@ -52,6 +53,7 @@ fun MainScreen(
             )
         },
         floatingActionButton = {
+            Column {
             ExtendedFloatingActionButton(
                 onClick = onAiChatClick,
                 icon = { Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null) },
@@ -59,7 +61,23 @@ fun MainScreen(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                ExtendedFloatingActionButton(
+                    onClick = onGroupChatClick,
+                    icon = {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = null
+                        )
+                    },
+                    text = {
+                        Text("Group Chat")
+                    }
+                )
+            }
         }
+
     ) { padding ->
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

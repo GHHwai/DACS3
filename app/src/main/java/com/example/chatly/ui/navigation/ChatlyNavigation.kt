@@ -10,6 +10,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.chatly.ui.screen.*
 import com.example.chatly.viewmodel.AiChatViewModel
 import com.example.chatly.data.repository.FirebaseAiChatRepository
+import com.example.chatly.ui.chat.GroupsScreen
+import com.example.chatly.ui.chat.GroupChatScreen
+import com.example.chatly.data.repository.GroupChatRepository
+import com.example.chatly.ui.chat.GroupChatViewModel
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -27,6 +31,17 @@ sealed class Screen(val route: String) {
     object UserDetail : Screen("user_detail/{userId}") {
         fun createRoute(userId: String) = "user_detail/$userId"
     }
+    object Groups : Screen("groups")
+
+    object GroupChat :
+        Screen("group_chat/{groupId}/{groupName}") {
+
+        fun createRoute(
+            groupId: String,
+            groupName: String
+        ) =
+            "group_chat/$groupId/$groupName"
+    }
 }
 
 @Composable
@@ -34,6 +49,12 @@ fun ChatlyNavHost(
     navController: NavHostController,
     startDestination: String = Screen.Splash.route
 ) {
+    // Khởi tạo repository chuẩn từ Class bạn vừa viết
+    val groupRepository = GroupChatRepository()
+
+    val groupChatViewModel: GroupChatViewModel = viewModel(
+        factory = GroupChatViewModel.Factory(groupRepository)
+    )
     NavHost(
         navController = navController,
         startDestination = startDestination
@@ -91,10 +112,15 @@ fun ChatlyNavHost(
             MainScreen(
                 onUserClick = { user ->
                     navController.navigate(
-                        Screen.Chat.createRoute(user.uid, user.displayName ?: "", user.photoUrl ?: "none")
+                        Screen.Chat.createRoute(
+                            user.uid,
+                            user.displayName ?: "",
+                            user.photoUrl ?: "none"
+                        )
                     )
                 },
                 onAiChatClick = { navController.navigate(Screen.AiChat.route) },
+                onGroupChatClick = { navController.navigate(Screen.Groups.route) },
                 onProfileClick = { navController.navigate(Screen.Profile.route) },
                 onLogout = {
                     navController.navigate(Screen.Greeting.route) {
@@ -164,5 +190,38 @@ fun ChatlyNavHost(
                 onBackClick = { navController.popBackStack() }
             )
         }
+
+        // Groups
+        composable(Screen.Groups.route) {
+            GroupsScreen(
+                viewModel = groupChatViewModel, // Truyền viewModel vào
+                onGroupClick = { group ->
+                    navController.navigate(
+                        Screen.GroupChat.createRoute(group.id, group.groupName)
+                    )
+                },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // Group Chat
+        composable(
+            route = Screen.GroupChat.route,
+            arguments = listOf(
+                navArgument("groupId") { type = NavType.StringType },
+                navArgument("groupName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val groupId = backStackEntry.arguments?.getString("groupId") ?: ""
+            val groupName = backStackEntry.arguments?.getString("groupName") ?: ""
+
+            GroupChatScreen(
+                groupId = groupId,
+                groupName = groupName,
+                viewModel = groupChatViewModel, // Truyền viewModel vào
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
     }
 }
