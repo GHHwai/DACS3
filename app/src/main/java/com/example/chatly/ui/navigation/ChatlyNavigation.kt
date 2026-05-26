@@ -38,10 +38,9 @@ sealed class Screen(val route: String) {
     object EditExam : Screen("edit_exam/{examId}") {
         fun createRoute(examId: String) = "edit_exam/$examId"
     }
-    object Chat : Screen("chat/{userId}/{userName}/{userPhotoUrl}") {
-        fun createRoute(userId: String, userName: String, userPhotoUrl: String): String {
-            val encodedUrl = java.net.URLEncoder.encode(userPhotoUrl, "UTF-8")
-            return "chat/$userId/$userName/$encodedUrl"
+    object Chat : Screen("chat/{userId}") {
+        fun createRoute(userId: String): String {
+            return "chat/$userId"
         }
     }
     object AiChat : Screen("ai_chat")
@@ -142,11 +141,7 @@ fun ChatlyNavHost(
             MainScreen(
                 onUserClick = { user ->
                     navController.navigate(
-                        Screen.Chat.createRoute(
-                            user.uid,
-                            user.displayName ?: "",
-                            user.photoUrl ?: "none"
-                        )
+                        Screen.Chat.createRoute(user.uid)
                     )
                 },
                 // --- ĐÃ ĐƯỢC GỘP ĐẦY ĐỦ CẢ NHÓM CHAT VÀ LỊCH HỌC Ở ĐÂY SẠCH LỖI ---
@@ -166,13 +161,16 @@ fun ChatlyNavHost(
         composable(
             route = Screen.Chat.route,
             arguments = listOf(
-                navArgument("userId") { type = NavType.StringType },
-                navArgument("userName") { type = NavType.StringType },
-                navArgument("userPhotoUrl") { type = NavType.StringType }
+                navArgument("userId") {
+                    type = NavType.StringType
+                }
             )
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: ""
-            val userName = backStackEntry.arguments?.getString("userName") ?: ""
+            val userName = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("userName") ?: "",
+                "UTF-8"
+            )
             val userPhotoUrl = java.net.URLDecoder.decode(
                 backStackEntry.arguments?.getString("userPhotoUrl") ?: "none",
                 "UTF-8"

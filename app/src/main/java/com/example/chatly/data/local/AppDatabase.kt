@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.example.chatly.data.model.Message
 import com.example.chatly.data.model.UserEntity
 
-@Database(entities = [UserEntity::class, Message::class], version = 1 , exportSchema = false)
+@Database(entities = [UserEntity::class, Message::class], version = 2 , exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun messageDao(): MessageDao

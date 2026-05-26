@@ -80,15 +80,28 @@ fun ChatScreen(
                     }
                 },
                 actions = {
-                    AsyncImage(
-                        model = if (userPhotoUrl != "none") userPhotoUrl else Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .clickable { onUserClick() },
-                        contentScale = ContentScale.Crop
-                    )
+                    if (!userPhotoUrl.isNullOrEmpty() && userPhotoUrl != "none") {
+
+                        AsyncImage(
+                            model = userPhotoUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .clickable { onUserClick() },
+                            contentScale = ContentScale.Crop
+                        )
+
+                    } else {
+
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clickable { onUserClick() }
+                        )
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                 }
             )
