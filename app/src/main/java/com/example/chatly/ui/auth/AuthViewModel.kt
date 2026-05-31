@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.chatly.data.model.User
 import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.flow.asStateFlow
 
 class AuthViewModel : ViewModel() {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
@@ -20,6 +21,8 @@ class AuthViewModel : ViewModel() {
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading = _isLoading.asStateFlow()
     fun firebaseAuthWithGoogle(idToken: String) {
 
         val credential = GoogleAuthProvider.getCredential(idToken, null)
@@ -52,18 +55,24 @@ class AuthViewModel : ViewModel() {
     }
     fun login(email: String, password: String) {
         Log.d("AuthViewModel", "Attempt login with $email")
+
         _error.value = null
+        _isLoading.value = true
+
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
+                _isLoading.value = false
                 if (task.isSuccessful) {
                     Log.d("AuthViewModel", "Login success")
+
                     val uid = auth.currentUser?.uid
                     if (uid != null) {
-                        FirebaseFirestore.getInstance().collection("users").document(uid)
+                        FirebaseFirestore.getInstance()
+                            .collection("users")
+                            .document(uid)
                             .get()
                             .addOnSuccessListener { doc ->
-                                val role = doc.getString("role") ?: "user"
-                                _userRole.value = role
+                                _userRole.value = doc.getString("role") ?: "user"
                                 _authState.value = true
                             }
                             .addOnFailureListener {
@@ -83,8 +92,10 @@ class AuthViewModel : ViewModel() {
 
     fun register(displayName: String, mobile: String, email: String, password: String) {
         _error.value = null
+        _isLoading.value = true
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
+                _isLoading.value = false
                 if (task.isSuccessful) {
                     val user = auth.currentUser
 

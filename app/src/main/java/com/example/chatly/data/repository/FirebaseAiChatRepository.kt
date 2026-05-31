@@ -1,6 +1,12 @@
 package com.example.chatly.data.repository
 
+import android.util.Log
+import com.example.chatly.OllamaApi
+import com.example.chatly.OllamaClient
+import com.example.chatly.OllamaMessage
+import com.example.chatly.OllamaRequest
 import com.example.chatly.data.model.AiChatMessage
+import com.example.chatly.data.model.ChatSession
 import com.example.chatly.data.model.admin.ChatbotLog
 import com.google.firebase.Firebase
 import com.google.firebase.ai.ai
@@ -14,19 +20,21 @@ class FirebaseAiChatRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
 
-    // Session chat history
-    private val chatHistory = mutableListOf<AiChatMessage>()
-
     // System prompt
     private val systemPrompt = """
-        Bạn là một trợ lý học tập thông minh và thân thiện trong ứng dụng Chatly.
+You are a smart and friendly learning assistant in the Chatly app.
 
-        Nhiệm vụ:
-        1. Trả lời bằng tiếng Việt tự nhiên.
-        2. Hỗ trợ học tập, code, bài tập.
-        3. Trình bày code bằng Markdown.
-        4. Khuyến khích người dùng học tập.
-        5. Không trả lời nội dung nguy hiểm hoặc vi phạm pháp luật.
+Tasks:
+
+1. Respond in natural Vietnamese.
+
+2. Provide support for learning, coding, and assignments.
+
+3. Present code using Markdown.
+
+4. Encourage users to learn.
+
+5. Do not respond to dangerous or illegal content.
     """.trimIndent()
 
     // Firebase AI model
@@ -34,56 +42,139 @@ class FirebaseAiChatRepository(
         Firebase.ai(backend = GenerativeBackend.googleAI())
             .generativeModel("gemini-3-flash-preview")
     }
-
-    suspend fun getAiResponse(userMessage: String): Result<String> {
-
-        val userId = auth.currentUser?.uid ?: "anonymous"
+    private suspend fun callFirebaseAI(
+        finalPrompt: String
+    ): String? {
 
         return try {
 
-            // Build history
-            val historyText = chatHistory.joinToString("\n") { msg ->
-                if (msg.isMine) {
-                    "User: ${msg.content}"
-                } else {
-                    "AI: ${msg.content}"
-                }
+            Log.d("FIREBASE_AI", "🚀 START REQUEST")
+            Log.d("FIREBASE_AI", "📦 PROMPT SIZE = ${finalPrompt.length}")
+
+            val response = model.generateContent(
+                content { text(finalPrompt) }
+            )
+
+            Log.d("FIREBASE_AI", "📩 RAW RESPONSE = $response")
+
+            val text = response.text
+
+            if (text == null) {
+                Log.e("FIREBASE_AI", "⚠️ RESPONSE TEXT IS NULL")
+            } else {
+                Log.d("FIREBASE_AI", "💬 AI TEXT = $text")
             }
 
-            val finalPrompt = """
-                $systemPrompt
+            return text
 
-                $historyText
+        } catch (e: Exception) {
 
-                User: $userMessage
-                AI:
-            """.trimIndent()
+            Log.e("FIREBASE_AI_ERROR", "❌ MESSAGE: ${e.message}")
+            Log.e("FIREBASE_AI_ERROR", "❌ CLASS: ${e.javaClass}")
+            Log.e("FIREBASE_AI_ERROR", "❌ CAUSE: ${e.cause}")
+            Log.e("FIREBASE_AI_ERROR", "❌ STACKTRACE:\n${Log.getStackTraceString(e)}")
 
-            // Generate response
-            val response = model.generateContent(
-                content {
-                    text(finalPrompt)
+            // 🔥 detect quota / rate limit
+            if (e.message?.contains("quota", ignoreCase = true) == true ||
+                e.message?.contains("429", ignoreCase = true) == true
+            ) {
+                Log.e("FIREBASE_AI_ERROR", "🔥 POSSIBLE QUOTA EXCEEDED")
+            }
+
+            // 🔥 detect network
+            if (e is java.net.UnknownHostException) {
+                Log.e("FIREBASE_AI_ERROR", "🌐 NETWORK ERROR")
+            }
+
+            // 🔥 detect timeout
+            if (e is java.net.SocketTimeoutException) {
+                Log.e("FIREBASE_AI_ERROR", "⏰ TIMEOUT ERROR")
+            }
+
+            return null
+        }
+    }
+    private suspend fun callOllamaAI(
+        messages: List<AiChatMessage>,
+        userMessage: String
+    ): String? {
+
+        try {
+            Log.d("OLLAMA_DEBUG", "🚀 START REQUEST")
+
+            val history = messages.map {
+                OllamaMessage(
+                    role = if (it.isMine) "user" else "assistant",
+                    content = it.content
+                )
+            }
+
+            val request = OllamaRequest(
+                model = "llama2",
+                messages = history + OllamaMessage(
+                    role = "user",
+                    content = userMessage
+                )
+            )
+
+            Log.d("OLLAMA_DEBUG", "📦 REQUEST = $request")
+
+            val response = OllamaClient.api.chat(request)
+
+            Log.d("OLLAMA_DEBUG", "📩 RAW RESPONSE = $response")
+
+            val content = response.message?.content
+
+            Log.d("OLLAMA_DEBUG", "💬 CONTENT = $content")
+
+            return content
+
+        } catch (e: Exception) {
+
+            Log.e("OLLAMA_ERROR", "❌ MESSAGE: ${e.message}")
+            Log.e("OLLAMA_ERROR", "❌ CLASS: ${e.javaClass}")
+            Log.e("OLLAMA_ERROR", "❌ STACKTRACE:\n${Log.getStackTraceString(e)}")
+
+            return null
+        }
+    }
+    suspend fun getAiResponse(
+        messages: List<AiChatMessage>,
+        userMessage: String
+    ): Result<String> {
+
+        val userId =
+            auth.currentUser?.uid
+                ?: "anonymous"
+
+        return try {
+
+            val historyText =
+                messages.joinToString("\n") { msg ->
+
+                    if (msg.isMine) {
+                        "User: ${msg.content}"
+                    } else {
+                        "AI: ${msg.content}"
+                    }
                 }
-            )
 
-            val aiText = response.text ?: "AI không trả lời được"
+            val finalPrompt = """
+            $systemPrompt
 
-            // Update session history
-            chatHistory.add(
-                AiChatMessage(
-                    content = userMessage,
-                    isMine = true
-                )
-            )
+            $historyText
 
-            chatHistory.add(
-                AiChatMessage(
-                    content = aiText,
-                    isMine = false
-                )
-            )
+            User: $userMessage
+            AI:
+        """.trimIndent()
 
-            // Save log
+            val firebase = callFirebaseAI(finalPrompt)
+            val ollama = callOllamaAI(messages, userMessage)
+
+            Log.d("AI_DEBUG", "ollama=$ollama")
+
+            val aiText = firebase ?: ollama ?: "Errors when calling the AI"
+
             val log = ChatbotLog(
                 userId = userId,
                 query = userMessage,
@@ -92,7 +183,8 @@ class FirebaseAiChatRepository(
                 timestamp = System.currentTimeMillis()
             )
 
-            firestore.collection("chatbot_logs")
+            firestore
+                .collection("chatbot_logs")
                 .add(log)
 
             Result.success(aiText)
@@ -110,18 +202,93 @@ class FirebaseAiChatRepository(
                 timestamp = System.currentTimeMillis()
             )
 
-            firestore.collection("chatbot_logs")
+            firestore
+                .collection("chatbot_logs")
                 .add(errorLog)
 
             Result.failure(e)
         }
     }
-
-    fun clearHistory() {
-        chatHistory.clear()
+    fun saveChatSession(session: ChatSession) {
+        firestore
+            .collection("users")
+            .document(session.userId)
+            .collection("sessions")
+            .document(session.id)
+            .set(session)
     }
+    fun saveMessage(userId: String, sessionId: String, message: AiChatMessage) {
 
-    fun getHistory(): List<AiChatMessage> {
-        return chatHistory.toList()
+        firestore
+            .collection("users")
+            .document(userId)
+            .collection("sessions")
+            .document(sessionId)
+            .collection("messages")
+            .add(message)
+    }
+    fun getMessages(userId: String, sessionId: String, callback: (List<AiChatMessage>) -> Unit) {
+
+        firestore
+            .collection("users")
+            .document(userId)
+            .collection("sessions")
+            .document(sessionId)
+            .collection("messages")
+            .get()
+            .addOnSuccessListener { snap ->
+
+                val list = snap.documents.mapNotNull {
+                    it.toObject(AiChatMessage::class.java)
+                }
+
+                callback(list)
+            }
+    }
+    fun getChatSessions(userId: String, callback: (List<ChatSession>) -> Unit) {
+
+        firestore
+            .collection("users")
+            .document(userId)
+            .collection("sessions")
+            .get()
+            .addOnSuccessListener { snap ->
+
+                val list = snap.documents.mapNotNull {
+                    it.toObject(ChatSession::class.java)
+                }
+
+                callback(list)
+            }
+    }
+    fun updateSessionTitle(uid: String, sessionId: String, title: String){
+        firestore.collection("users")
+            .document(uid)
+            .collection("sessions")
+            .document(sessionId)
+            .update("title", title)
+    }
+    fun deleteSession(userId: String, sessionId: String) {
+
+        val sessionRef = firestore
+            .collection("users")
+            .document(userId)
+            .collection("sessions")
+            .document(sessionId)
+
+        // delete messages trước
+        sessionRef.collection("messages")
+            .get()
+            .addOnSuccessListener { snap ->
+                val batch = firestore.batch()
+
+                snap.documents.forEach {
+                    batch.delete(it.reference)
+                }
+
+                batch.commit().addOnSuccessListener {
+                    sessionRef.delete()
+                }
+            }
     }
 }

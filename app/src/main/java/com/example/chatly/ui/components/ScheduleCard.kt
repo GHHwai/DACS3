@@ -18,45 +18,76 @@ fun ScheduleCard(
 ) {
 
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
 
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
 
-            Text(
-                text = schedule.subject,
-                style = MaterialTheme.typography.titleMedium
-            )
+            // HEADER
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = schedule.subject,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
 
-            Text("${schedule.startTime} - ${schedule.endTime}")
+                Row {
 
-            Text("Room: ${schedule.room}")
+                    IconButton(onClick = onEdit) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit"
+                        )
+                    }
 
-            Text("Teacher: ${schedule.teacher}")
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row {
-
-                IconButton(onClick = onEdit) {
-
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = null
-                    )
+            // TIME CHIP
+            AssistChip(
+                onClick = {},
+                label = {
+                    Text("${schedule.startTime} - ${schedule.endTime}")
                 }
+            )
 
-                IconButton(onClick = onDelete) {
+            Spacer(modifier = Modifier.height(10.dp))
 
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = null
-                    )
-                }
+            // INFO SECTION
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+
+                Text(
+                    text = "📍 Room: ${schedule.room}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Text(
+                    text = "👨‍🏫 Teacher: ${schedule.teacher}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

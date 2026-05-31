@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
     <application
+        android:usesCleartextTraffic="true"
         android:name=".ChatlyApplication"
         android:allowBackup="true"
         android:icon="@drawable/logo_icon"

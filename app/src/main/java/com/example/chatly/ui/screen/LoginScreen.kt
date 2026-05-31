@@ -41,7 +41,7 @@ fun LoginScreen(
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val userRole by viewModel.userRole.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
-    var isLoading by remember { mutableStateOf(false) }
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val gso = GoogleSignInOptions.Builder(
@@ -149,7 +149,6 @@ fun LoginScreen(
             isLoading = isLoading,
             onClick = {
                 if (email.isNotBlank() && password.isNotBlank()) {
-                    isLoading = true
                     viewModel.login(email, password)
                 }
             },

@@ -16,47 +16,75 @@ fun ExamCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
 
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
 
-            Text(
-                text = exam.subject,
-                style = MaterialTheme.typography.titleMedium
-            )
+            // HEADER
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = exam.subject,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
 
-            Text("Date: ${exam.examDate}")
+                Row {
 
-            Text("Room: ${exam.room}")
+                    IconButton(onClick = onEdit) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit"
+                        )
+                    }
 
-            Text("Note: ${exam.note}")
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row {
+            // INFO CHIPS STYLE
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
 
-                IconButton(onClick = onEdit) {
+                AssistChip(
+                    onClick = {},
+                    label = { Text(exam.examDate) }
+                )
 
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = null
-                    )
-                }
+                AssistChip(
+                    onClick = {},
+                    label = { Text("Room: ${exam.room}") }
+                )
+            }
 
-                IconButton(onClick = onDelete) {
+            Spacer(modifier = Modifier.height(12.dp))
 
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = null
-                    )
-                }
+            if (exam.note.isNotBlank()) {
+                Text(
+                    text = exam.note,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

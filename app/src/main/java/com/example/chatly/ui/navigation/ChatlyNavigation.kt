@@ -189,6 +189,7 @@ fun ChatlyNavHost(
         // Schedule
         composable(Screen.Schedule.route) {
             ScheduleScreen(
+                onBackClick = { navController.navigate(Screen.Main.route)},
                 onAddStudyClick = { navController.navigate(Screen.AddSchedule.route) },
                 onAddExamClick = { navController.navigate(Screen.AddExam.route) },
                 onEditStudyClick = { id -> navController.navigate(Screen.EditSchedule.createRoute(id)) },
