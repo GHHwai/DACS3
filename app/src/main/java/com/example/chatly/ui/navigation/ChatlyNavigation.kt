@@ -17,6 +17,7 @@ import com.example.chatly.ui.screen.GroupChatScreen
 import com.example.chatly.data.repository.GroupChatRepository
 import com.example.chatly.ui.chat.GroupChatViewModel
 import com.example.chatly.data.repository.admin.AdminRepository
+import com.example.chatly.ui.screen.NotificationHistoryScreen
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -49,6 +50,9 @@ sealed class Screen(val route: String) {
     object UserDetail : Screen("user_detail/{userId}") {
         fun createRoute(userId: String) = "user_detail/$userId"
     }
+
+    // --- 1. THÊM ROUTE CHO MÀN HÌNH LỊCH SỬ THÔNG BÁO TẠI ĐÂY ---
+    object NotificationHistory : Screen("notification_history")
 
     // Admin Routes
     object AdminDashboard : Screen("admin_dashboard")
@@ -144,16 +148,26 @@ fun ChatlyNavHost(
                         Screen.Chat.createRoute(user.uid)
                     )
                 },
-                // --- ĐÃ ĐƯỢC GỘP ĐẦY ĐỦ CẢ NHÓM CHAT VÀ LỊCH HỌC Ở ĐÂY SẠCH LỖI ---
                 onAiChatClick = { navController.navigate(Screen.AiChat.route) },
                 onGroupChatClick = { navController.navigate(Screen.Groups.route) },
                 onScheduleClick = { navController.navigate(Screen.Schedule.route) },
                 onProfileClick = { navController.navigate(Screen.Profile.route) },
+
+                // --- 2. TRUYỀN HÀM XỬ LÝ CLICK QUẢ CHUÔNG ĐỂ CHUYỂN MÀN HÌNH ---
+                onNotificationClick = { navController.navigate(Screen.NotificationHistory.route) },
+
                 onLogout = {
                     navController.navigate(Screen.Greeting.route) {
                         popUpTo(Screen.Main.route) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        // --- 3. ĐỊNH NGHĨA KHỐI COMPOSABLE CHO MÀN HÌNH LỊCH SỬ THÔNG BÁO ---
+        composable(Screen.NotificationHistory.route) {
+            NotificationHistoryScreen(
+                onBackClick = { navController.popBackStack() }
             )
         }
 

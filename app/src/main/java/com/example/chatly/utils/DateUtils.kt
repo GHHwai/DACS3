@@ -1,4 +1,4 @@
-package com.example.chatly.util
+package com.example.chatly.utils
 
 import java.text.SimpleDateFormat
 import java.util.Date
