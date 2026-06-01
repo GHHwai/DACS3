@@ -79,6 +79,7 @@ fun GroupChatScreen(
 
     val listState = rememberLazyListState()
 
+    // 🛠️ ĐÃ SỬA: Sắp xếp chuẩn xác theo trường timestamp có sẵn trong Model của bạn
     val sortedMessages = remember(messages) {
         messages.sortedBy { it.timestamp }
     }
@@ -95,11 +96,13 @@ fun GroupChatScreen(
         uri?.let { viewModel.uploadFileToFreeService(context, groupId, currentUserId, it, isImage = false) }
     }
 
+    // Tải dữ liệu ban đầu
     LaunchedEffect(groupId) {
         viewModel.loadMessages(groupId)
         viewModel.loadAllUsers()
     }
 
+    // 🛠️ ĐÃ SỬA: Theo dõi theo .size và bỏ coroutineScope.launch dư thừa để cuộn mượt xuống đáy
     LaunchedEffect(sortedMessages.size) {
         if (sortedMessages.isNotEmpty()) {
             listState.animateScrollToItem(sortedMessages.size - 1)
@@ -112,7 +115,7 @@ fun GroupChatScreen(
             ChatlyTopAppBar(
                 title = groupName,
                 navigationIcon = {
-                    IconButton(onClick = { onBackClick() }) {
+                    IconButton(onClick = onBackClick) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF1E293B))
                     }
                 },
@@ -246,8 +249,8 @@ fun GroupChatScreen(
                                         groupId = groupId,
                                         senderName = currentUserId,
                                         content = text
+                                        // Trường timestamp tự động lấy System.currentTimeMillis() theo Data Class của bạn
                                     )
-                                    // CHỈ GỬI TIN NHẮN, KHÔNG GỬI THÔNG BÁO FIRESTORE NỮA
                                     viewModel.sendMessage(newMessage)
                                     text = ""
                                 }
@@ -271,7 +274,145 @@ fun GroupChatScreen(
             }
         }
     }
-    // ... (Phần Dialog giữ nguyên, bỏ bớt phần hiển thị Dialog ở đây cho gọn tin nhắn)
+
+    // Dialog Mời thành viên
+    if (showInviteDialog) {
+        val usersNotInGroup = allUsers.filter { !currentGroupMembers.contains(it.uid) }
+        var searchQuery by remember { mutableStateOf("") }
+        val membersToInvite = remember { mutableStateListOf<String>() }
+        val filteredUsers = usersNotInGroup.filter { (it.displayName ?: "Ẩn danh").contains(searchQuery, ignoreCase = true) }
+
+        Dialog(onDismissRequest = { showInviteDialog = false; membersToInvite.clear(); searchQuery = "" }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp).shadow(16.dp, shape = RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp), color = Color.White, border = BorderStroke(1.5.dp, Color(0xFFCBD5E1))
+            ) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text("Mời thành viên mới", fontWeight = FontWeight.Black, fontSize = 20.sp, color = Color(0xFF0F172A))
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = searchQuery, onValueChange = { searchQuery = it },
+                        placeholder = { Text("Tìm tên thành viên...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Tìm kiếm") },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    if (filteredUsers.isEmpty()) {
+                        Text(text = "Không tìm thấy thành viên.", color = Color(0xFF64748B))
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp)) {
+                            items(filteredUsers) { user ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().clickable {
+                                        if (membersToInvite.contains(user.uid)) membersToInvite.remove(user.uid) else membersToInvite.add(user.uid)
+                                    }.padding(vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(checked = membersToInvite.contains(user.uid), onCheckedChange = { isChecked -> if (isChecked) membersToInvite.add(user.uid) else membersToInvite.remove(user.uid) })
+                                    Text(text = user.displayName ?: "Ẩn danh", modifier = Modifier.padding(start = 8.dp), color = Color(0xFF0F172A))
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showInviteDialog = false }) { Text("Hủy") }
+                        Button(onClick = {
+                            if (membersToInvite.isNotEmpty()) {
+                                viewModel.updateMembers(groupId, currentGroupMembers + membersToInvite)
+                            }
+                            showInviteDialog = false
+                        }) { Text("Mời") }
+                    }
+                }
+            }
+        }
+    }
+
+    // Dialog Xóa thành viên
+    if (showRemoveDialog) {
+        val usersInGroup = allUsers.filter { currentGroupMembers.contains(it.uid) && it.uid != currentUserId }
+        var removeSearchQuery by remember { mutableStateOf("") }
+        val membersToRemove = remember { mutableStateListOf<String>() }
+        val filteredGroupUsers = usersInGroup.filter { (it.displayName ?: "Ẩn danh").contains(removeSearchQuery, ignoreCase = true) }
+
+        Dialog(onDismissRequest = { showRemoveDialog = false; membersToRemove.clear(); removeSearchQuery = "" }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp).shadow(16.dp, shape = RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp), color = Color.White, border = BorderStroke(1.5.dp, Color(0xFFCBD5E1))
+            ) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text("Xóa thành viên khỏi nhóm", fontWeight = FontWeight.Black, fontSize = 20.sp, color = Color(0xFFEF4444))
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = removeSearchQuery, onValueChange = { removeSearchQuery = it },
+                        placeholder = { Text("Tìm thành viên cần xóa...") },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(12.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 220.dp)) {
+                        items(filteredGroupUsers) { user ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    if (membersToRemove.contains(user.uid)) membersToRemove.remove(user.uid) else membersToRemove.add(user.uid)
+                                }.padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(checked = membersToRemove.contains(user.uid), onCheckedChange = { isChecked -> if (isChecked) membersToRemove.add(user.uid) else membersToRemove.remove(user.uid) })
+                                Text(text = user.displayName ?: "Ẩn danh", modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showRemoveDialog = false }) { Text("Hủy") }
+                        Button(colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)), onClick = {
+                            if (membersToRemove.isNotEmpty()) {
+                                val updatedMembers = currentGroupMembers.filter { !membersToRemove.contains(it) }
+                                viewModel.updateMembers(groupId, updatedMembers)
+                            }
+                            showRemoveDialog = false
+                        }) { Text("Xóa") }
+                    }
+                }
+            }
+        }
+    }
+
+    // Dialog Xem thành viên nhóm
+    if (showMembersDialog) {
+        Dialog(onDismissRequest = { showMembersDialog = false }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp).shadow(16.dp, shape = RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp), color = Color.White, border = BorderStroke(1.5.dp, Color(0xFFCBD5E1))
+            ) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text(text = "Thành viên nhóm (${currentGroupMembers.size})", fontWeight = FontWeight.Black, fontSize = 20.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(modifier = Modifier.heightIn(max = 260.dp)) {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(viewModel.groupMembersInfo) { member ->
+                                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    AsyncImage(
+                                        model = member.photoUrl, contentDescription = null,
+                                        modifier = Modifier.size(42.dp).clip(CircleShape).background(Color(0xFFEFF6FF), CircleShape),
+                                        contentScale = ContentScale.Crop,
+                                        error = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_gallery)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(text = member.displayName ?: "Ẩn danh", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showMembersDialog = false }) { Text("Đóng", fontWeight = FontWeight.Bold) }
+                    }
+                }
+            }
+        }
+    }
 }
 
 // Sub-composable hiển thị bong bóng tin nhắn (Giữ nguyên gốc)
