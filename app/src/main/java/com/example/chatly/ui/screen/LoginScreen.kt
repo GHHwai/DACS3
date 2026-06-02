@@ -1,5 +1,6 @@
 package com.example.chatly.ui.screen
 
+import android.content.Intent
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.chatly.receiver.ScheduleAlarmReceiver // Import đúng Receiver của bạn
 import com.example.chatly.ui.auth.AuthViewModel
 import com.example.chatly.ui.components.ChatlyButton
 import com.example.chatly.ui.components.ChatlyTextField
@@ -55,32 +57,38 @@ fun LoginScreen(
 
     val googleSignInClient: GoogleSignInClient =
         GoogleSignIn.getClient(context, gso)
+
+    // ĐÃ SỬA: Gọi trực tiếp đến ScheduleAlarmReceiver để vừa lưu Firestore vừa đẩy thông báo nổi lên màn hình
     LaunchedEffect(authState, userRole) {
         if (authState && userRole != null) {
+            val intent = Intent(context, ScheduleAlarmReceiver::class.java).apply {
+                putExtra("title", "New Login Detected")
+                putExtra("message", "You have successfully logged into Chatly just now.")
+                putExtra("notificationId", System.currentTimeMillis().toInt())
+            }
+            context.sendBroadcast(intent)
+
             onLoginSuccess(userRole!!)
         }
     }
+
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-
         task.addOnCompleteListener { completedTask ->
             if (completedTask.isSuccessful) {
-
                 val account = completedTask.result
                 val idToken = account.idToken
-
                 if (idToken != null) {
                     viewModel.firebaseAuthWithGoogle(idToken)
                 }
-
             } else {
                 Log.e("GoogleSignIn", "Sign in failed", completedTask.exception)
             }
         }
     }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -107,10 +115,7 @@ fun LoginScreen(
         ChatlyTextField(
             value = email,
             onValueChange = { email = it },
-            label =
-
-
-                "Email",
+            label = "Email",
             leadingIcon = Icons.Default.Email,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -120,15 +125,13 @@ fun LoginScreen(
             onValueChange = { password = it },
             label = "Password",
             leadingIcon = Icons.Default.Lock,
-            visualTransformation =
-                if (passwordVisible) VisualTransformation.None
-                else PasswordVisualTransformation(),
+            visualTransformation = if (passwordVisible) VisualTransformation.None
+            else PasswordVisualTransformation(),
             trailingIcon = {
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
-                        imageVector =
-                            if (passwordVisible) Icons.Default.VisibilityOff
-                            else Icons.Default.Visibility,
+                        imageVector = if (passwordVisible) Icons.Default.VisibilityOff
+                        else Icons.Default.Visibility,
                         contentDescription = "Toggle password visibility"
                     )
                 }
@@ -154,6 +157,7 @@ fun LoginScreen(
             },
             modifier = Modifier.padding(bottom = 16.dp)
         )
+
         OutlinedButton(
             onClick = {
                 launcher.launch(googleSignInClient.signInIntent)
@@ -164,6 +168,7 @@ fun LoginScreen(
         ) {
             Text("Sign in with Google")
         }
+
         TextButton(onClick = onNavigateToRegister) {
             Text(text = "Don't have an account? Register")
         }

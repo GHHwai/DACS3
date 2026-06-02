@@ -1,15 +1,19 @@
 package com.example.chatly.ui.screen
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -25,25 +29,35 @@ fun ScheduleScreen(
     onEditExamClick: (String) -> Unit,
     viewModel: ScheduleViewModel = viewModel()
 ) {
-
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val filteredSchedules = uiState.studySchedules.filter {
+    // Lắng nghe và yêu cầu cấp quyền hiển thị thông báo đối với Android 13+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+            // Xử lý khi người dùng từ chối quyền (Có thể thông báo Toast cảnh báo mất tính năng nhắc lịch)
+        }
+    }
 
-        it.subject.contains(uiState.searchQuery, true)
-                &&
-                it.dayOfWeek == uiState.selectedDay
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    // --- TOÀN BỘ PHẦN KHỐI CODE SCAFFOLD & UI CỦA BẠN ĐƯỢC GIỮ NGUYÊN HOÀN TOÀN TỪ ĐÂY XUỐNG DƯỚI ---
+    val filteredSchedules = uiState.studySchedules.filter {
+        it.subject.contains(uiState.searchQuery, true) && it.dayOfWeek == uiState.selectedDay
     }
 
     val filteredExams = uiState.examSchedules.filter {
-
         it.subject.contains(uiState.searchQuery, true)
     }
 
     Scaffold(
-
         topBar = {
-
             ChatlyTopAppBar(
                 title = "Schedules",
                 navigationIcon = {
@@ -56,9 +70,7 @@ fun ScheduleScreen(
                 }
             )
         },
-
         floatingActionButton = {
-
             FloatingActionButton(
                 onClick = {
                     if (uiState.selectedTab == 0)
@@ -70,7 +82,6 @@ fun ScheduleScreen(
                 Icon(Icons.Default.Add, null)
             }
         }
-
     ) { padding ->
 
         Column(
@@ -106,9 +117,7 @@ fun ScheduleScreen(
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-
                     items(filteredSchedules) { schedule ->
-
                         ScheduleCard(
                             schedule = schedule,
                             onEdit = {
@@ -122,13 +131,10 @@ fun ScheduleScreen(
                 }
 
             } else {
-
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-
                     items(filteredExams) { exam ->
-
                         ExamCard(
                             exam = exam,
                             onEdit = {
@@ -138,7 +144,8 @@ fun ScheduleScreen(
                                 viewModel.deleteExamSchedule(exam.id)
                             }
                         )
-                    }                }
+                    }
+                }
             }
         }
     }

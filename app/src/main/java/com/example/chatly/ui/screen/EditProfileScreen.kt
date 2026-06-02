@@ -1,5 +1,6 @@
 package com.example.chatly.ui.screen
 
+import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -22,11 +23,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.example.chatly.receiver.ScheduleAlarmReceiver // Import đúng Receiver của bạn
 import com.example.chatly.ui.components.ChatlyButton
 import com.example.chatly.ui.components.ChatlyTextField
 import com.example.chatly.ui.components.ChatlyTopAppBar
 import com.example.chatly.ui.profile.ProfileViewModel
-import com.example.chatly.util.CloudinaryUploader
+import com.example.chatly.utils.CloudinaryUploader
 
 @Composable
 fun EditProfileScreen(
@@ -35,7 +37,7 @@ fun EditProfileScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    
+
     val CLOUDINARY_CLOUD_NAME = com.example.chatly.BuildConfig.CLOUDINARY_CLOUD_NAME
     val CLOUDINARY_UNSIGNED_PRESET = com.example.chatly.BuildConfig.CLOUDINARY_UNSIGNED_PRESET
 
@@ -45,8 +47,16 @@ fun EditProfileScreen(
         viewModel.onImageSelected(uri)
     }
 
+    // ĐÃ SỬA: Gọi đúng ScheduleAlarmReceiver để lưu log "Profile Updated" và thông báo tức thì
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) {
+            val intent = Intent(context, ScheduleAlarmReceiver::class.java).apply {
+                putExtra("title", "Profile Updated")
+                putExtra("message", "Your personal profile changes have been saved successfully.")
+                putExtra("notificationId", System.currentTimeMillis().toInt())
+            }
+            context.sendBroadcast(intent)
+
             Toast.makeText(context, "Profile updated!", Toast.LENGTH_SHORT).show()
             viewModel.resetSaveStatus()
             onBackClick()
@@ -81,9 +91,7 @@ fun EditProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             when {
-
                 uiState.profileImageUri != null -> {
-
                     AsyncImage(
                         model = uiState.profileImageUri,
                         contentDescription = null,
@@ -95,7 +103,6 @@ fun EditProfileScreen(
                 }
 
                 !uiState.photoUrl.isNullOrEmpty() -> {
-
                     AsyncImage(
                         model = uiState.photoUrl,
                         contentDescription = null,
@@ -107,7 +114,6 @@ fun EditProfileScreen(
                 }
 
                 else -> {
-
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,

@@ -1,5 +1,6 @@
 package com.example.chatly.ui.screen
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -15,12 +16,16 @@ import com.example.chatly.ui.components.ChatlyButton
 import com.example.chatly.ui.components.ChatlyTextField
 import com.example.chatly.ui.components.ChatlyTopAppBar
 import com.example.chatly.ui.viewmodel.ScheduleViewModel
+import androidx.compose.ui.platform.LocalContext
+import com.example.chatly.utils.NotificationScheduler
+import java.util.UUID
 
 @Composable
 fun AddExamScreen(
     onBackClick: () -> Unit,
     viewModel: ScheduleViewModel = viewModel()
 ) {
+    val context = LocalContext.current
 
     var subject by remember { mutableStateOf("") }
     var room by remember { mutableStateOf("") }
@@ -78,21 +83,63 @@ fun AddExamScreen(
             ChatlyButton(
                 text = if (uiState.isLoading) "Saving..." else "Save",
                 onClick = {
+                    // 1. Kiểm tra không được bỏ trống các trường bắt buộc
+                    if (subject.isBlank() || examDate.isBlank()) {
+                        Toast.makeText(context, "Vui lòng nhập đầy đủ Môn học và Ngày thi", Toast.LENGTH_SHORT).show()
+                        return@ChatlyButton
+                    }
 
-                    if (subject.isBlank() || examDate.isBlank()) return@ChatlyButton
+                    // 2. Chuyển đổi và kiểm tra định dạng ngày gõ tay (dd/MM/yyyy)
+                    val exactExamTime = NotificationScheduler.convertExamDateToMillis(examDate)
+                    if (exactExamTime == 0L) {
+                        Toast.makeText(context, "Ngày thi không đúng định dạng dd/MM/yyyy", Toast.LENGTH_LONG).show()
+                        return@ChatlyButton
+                    }
 
+                    val currentTime = System.currentTimeMillis()
+                    val examId = UUID.randomUUID().toString()
+
+                    // 3. Tiến hành gọi ViewModel để lưu vào Database
                     viewModel.addExamSchedule(
                         ExamSchedule(
+                            id = examId,
                             subject = subject,
                             room = room,
                             examDate = examDate,
                             note = note
                         ),
                         onSuccess = {
+                            // Khoảng thời gian 1 ngày tính bằng mili-giây
+                            val oneDayInMillis = 24 * 60 * 60 * 1000L
+
+                            // MỐC 1: Thông báo trước hẳn 1 ngày (vào lúc 7:00 sáng ngày hôm trước)
+                            val triggerOneDayBefore = exactExamTime - oneDayInMillis
+                            if (triggerOneDayBefore > currentTime) {
+                                NotificationScheduler.scheduleNotification(
+                                    context = context,
+                                    id = "${examId}_1day", // Truyền ID dạng chuỗi biệt lập
+                                    title = "Lịch thi: Ngày mai thi môn $subject",
+                                    message = "Nhắc nhở: Ngày mai bạn có lịch thi lúc 07:00 tại phòng $room. Nhớ chuẩn bị thẻ sinh viên nhé!",
+                                    triggerTimeInMillis = triggerOneDayBefore
+                                )
+                            }
+
+                            // MỐC 2: Thông báo đúng ngày thi vào lúc 7:00 sáng
+                            if (exactExamTime > currentTime) {
+                                NotificationScheduler.scheduleNotification(
+                                    context = context,
+                                    id = "${examId}_7am", // Truyền ID dạng chuỗi biệt lập
+                                    title = "Lịch thi: Hôm nay thi môn $subject",
+                                    message = "Phòng thi: $room. Ghi chú: $note. Bình tĩnh làm bài thật tốt nhé!",
+                                    triggerTimeInMillis = exactExamTime
+                                )
+                            }
+
+                            // Quay trở lại màn hình trước sau khi hoàn tất mọi thủ tục
                             onBackClick()
                         },
-                        onError = {
-                            println("Error: $it")
+                        onError = { error ->
+                            Toast.makeText(context, "Lỗi: $error", Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
