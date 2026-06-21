@@ -12,10 +12,6 @@ import com.example.chatly.data.model.QuizUiState
 import com.example.chatly.data.repository.FirebaseAiChatRepository
 import com.example.chatly.data.repository.QuizRepository
 import com.example.chatly.data.repository.ScheduleRepository
-import com.google.firebase.ai.type.GenerativeBackend
-import com.google.firebase.ai.type.content
-import com.google.firebase.Firebase
-import com.google.firebase.ai.ai
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,83 +24,107 @@ import org.json.JSONObject
 class QuizViewModel(
     private val quizRepository: QuizRepository = QuizRepository(),
     private val scheduleRepository: ScheduleRepository = ScheduleRepository(),
-    private val aiRepository: FirebaseAiChatRepository =
-        FirebaseAiChatRepository()
+    private val aiRepository: FirebaseAiChatRepository = FirebaseAiChatRepository()
 ) : ViewModel() {
+    @Volatile
+    private var isQuizCancelled = false
     private var currentSession: QuizSession? = null
     private var sessionId: String? = null
+
     private val _sessionState = MutableStateFlow<QuizSession?>(null)
     val sessionState: StateFlow<QuizSession?> = _sessionState.asStateFlow()
+
     private val _uiState = MutableStateFlow(QuizUiState())
     val uiState: StateFlow<QuizUiState> = _uiState.asStateFlow()
 
-    // Buffer of pre-fetched questions so the next one loads instantly
+    // --- Quiz History ---
+    private val _quizHistory = MutableStateFlow<List<QuizSession>>(emptyList())
+    val quizHistory: StateFlow<List<QuizSession>> = _quizHistory.asStateFlow()
+
+    private val _isHistoryLoading = MutableStateFlow(false)
+    val isHistoryLoading: StateFlow<Boolean> = _isHistoryLoading.asStateFlow()
+
     private val questionBuffer = mutableListOf<QuizQuestion>()
+    private fun getUid(): String {
+        return FirebaseAuth.getInstance().currentUser?.uid
+            ?: throw IllegalStateException("User not logged in")
+    }
 
-    // ─── Entry points ────────────────────────────────────────────────────────
+    fun loadQuizHistory() {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
-    /** Open the topic-selection dialog */
+        Log.d("QUIZ_DEBUG", "Current UID = $userId")
+
+        _isHistoryLoading.value = true
+
+        quizRepository.getSessionHistory(userId) { list ->
+            Log.d("QUIZ_DEBUG", "History count = ${list.size}")
+
+            list.forEach {
+                Log.d("QUIZ_DEBUG", "Session: ${it.id} - userId=${it.userId}")
+            }
+
+            _quizHistory.value = list
+            _isHistoryLoading.value = false
+        }
+    }
+
+    // ─── Entry points ─────────────────────────────────────────────────────────
+
     fun startQuizSetup() {
-
         _uiState.update {
             it.copy(
-                isQuizMode = true,
+                isQuizMode = false,
                 isTopicSelectionStep = true
             )
         }
 
         viewModelScope.launch {
-
             try {
-
-                val schedules =
-                    scheduleRepository
-                        .getStudySchedules()
-                        .first()
-
-                val subjects =
-                    schedules
-                        .mapNotNull {
-                            it.subject.takeIf(String::isNotBlank)
-                        }
-                        .distinct()
-
-                _uiState.update {
-                    it.copy(
-                        scheduleSubjects = subjects
-                    )
-                }
-
+                val schedules = scheduleRepository.getStudySchedules().first()
+                val subjects = schedules
+                    .mapNotNull { it.subject.takeIf(String::isNotBlank) }
+                    .distinct()
+                _uiState.update { it.copy(scheduleSubjects = subjects) }
             } catch (e: Exception) {
-
-                Log.e(
-                    "QuizViewModel",
-                    "Load schedules failed",
-                    e
-                )
+                Log.e("QuizViewModel", "Load schedules failed", e)
             }
         }
     }
+
     fun onTopicInputChange(value: String) {
         _uiState.update { it.copy(topicInput = value) }
     }
 
     fun dismissTopicSelection() {
-        _uiState.update { it.copy(isTopicSelectionStep = false, topicInput = "") }
+        _uiState.update {
+            QuizUiState()
+        }
+
+        questionBuffer.clear()
+        currentSession = null
+        sessionId = null
     }
 
-    /** Called when the user confirms a topic (typed or from schedule) */
     fun beginQuiz(topic: String, totalQuestions: Int = 5) {
-        questionBuffer.clear()
+        val uid = getUid()
+        Log.d("QUIZ_DEBUG", "Firebase UID = $uid")
         sessionId = java.util.UUID.randomUUID().toString()
+
         currentSession = QuizSession(
             id = sessionId!!,
-            userId = FirebaseAuth.getInstance().uid ?: "",
+            userId = uid,
             topic = topic,
             totalQuestions = totalQuestions,
             questions = emptyList(),
-            userAnswers = emptyList()
+            userAnswers = emptyList(),
+            createdAt = System.currentTimeMillis(),
+            isFinished = false,
+            correctCount = 0,
+            currentIndex = 0
         )
+        Log.d("QUIZ_DEBUG", "Session UID = ${currentSession?.userId}")
+        questionBuffer.clear()
         _sessionState.value = currentSession
         viewModelScope.launch {
             quizRepository.createSession(currentSession!!)
@@ -122,7 +142,7 @@ class QuizViewModel(
         fetchNextQuestion(topic, questionIndex = 0, totalQuestions = totalQuestions)
     }
 
-    // ─── Answer handling ─────────────────────────────────────────────────────
+    // ─── Answer handling ──────────────────────────────────────────────────────
 
     fun selectAnswer(answer: String) {
         val state = _uiState.value
@@ -130,11 +150,8 @@ class QuizViewModel(
 
         val isCorrect = answer == state.currentQuestion.correctAnswer
         val updatedSession = currentSession?.copy(
-            correctCount =
-                (currentSession?.correctCount ?: 0) + if (isCorrect) 1 else 0,
-
-            userAnswers =
-                currentSession?.userAnswers?.plus(answer) ?: listOf(answer)
+            correctCount = (currentSession?.correctCount ?: 0) + if (isCorrect) 1 else 0,
+            userAnswers = currentSession?.userAnswers?.plus(answer) ?: listOf(answer)
         )
         currentSession = updatedSession
         _sessionState.value = currentSession
@@ -161,26 +178,27 @@ class QuizViewModel(
         val state = _uiState.value
         val nextIndex = state.currentQuestionIndex + 1
 
-        currentSession = currentSession?.copy(
-            currentIndex = nextIndex
-        )
+        currentSession = currentSession?.copy(currentIndex = nextIndex)
+        quizRepository.updateSession(sessionId!!, mapOf("currentIndex" to nextIndex))
 
-        quizRepository.updateSession(
-            sessionId!!,
-            mapOf(
-                "currentIndex" to nextIndex
-            )
-        )
         if (nextIndex >= state.totalQuestions) {
-            sessionId?.let {
-                quizRepository.updateSession(
-                    sessionId!!,
-                    mapOf(
-                        "currentIndex" to nextIndex
-                    )
+
+            currentSession = currentSession?.copy(
+                isFinished = true,
+                currentIndex = nextIndex
+            )
+
+            quizRepository.updateSession(
+                sessionId!!,
+                mapOf(
+                    "isFinished" to true,
+                    "currentIndex" to nextIndex,
+                    "correctCount" to currentSession?.correctCount!!
                 )
-            }
-            _uiState.update { it.copy(isFinished = true, isAnswerRevealed = false) }
+            )
+
+            loadQuizHistory() // refresh UI
+            _uiState.update { it.copy(isFinished = true) }
             return
         }
 
@@ -195,7 +213,6 @@ class QuizViewModel(
                     isLoading = false
                 )
             }
-            // Pre-fetch the one after this
             if (nextIndex + 1 < state.totalQuestions) {
                 fetchNextQuestion(state.topicInput, nextIndex + 1, state.totalQuestions, bufferOnly = true)
             }
@@ -206,13 +223,14 @@ class QuizViewModel(
     }
 
     fun resetQuiz() {
+        isQuizCancelled = true
         questionBuffer.clear()
         currentSession = null
         sessionId = null
         _uiState.update { QuizUiState() }
     }
 
-    // ─── AI generation ───────────────────────────────────────────────────────
+    // ─── AI generation ────────────────────────────────────────────────────────
 
     private fun fetchNextQuestion(
         topic: String,
@@ -221,24 +239,23 @@ class QuizViewModel(
         bufferOnly: Boolean = false
     ) {
         viewModelScope.launch {
+            if (isQuizCancelled) return@launch
             try {
                 val prompt = buildQuizPrompt(topic, questionIndex + 1, totalQuestions)
-
                 val raw = aiRepository.generateQuizContent(prompt).getOrThrow()
                 val question = parseQuizQuestion(raw)
 
-                // luôn update session local trước
                 currentSession = currentSession?.copy(
                     questions = (currentSession?.questions ?: emptyList()) + question,
                     currentIndex = questionIndex
                 )
                 _sessionState.value = currentSession
+
                 if (bufferOnly) {
                     questionBuffer.add(question)
-                    return@launch   // ❗ STOP, không update Firestore
+                    return@launch
                 }
 
-                // UI update (chỉ khi main question)
                 _uiState.update {
                     it.copy(
                         currentQuestion = question,
@@ -250,7 +267,6 @@ class QuizViewModel(
                     )
                 }
 
-                // Firestore update (ONLY main flow)
                 sessionId?.let {
                     quizRepository.updateSession(
                         it,
@@ -261,7 +277,6 @@ class QuizViewModel(
                     )
                 }
 
-                // preload next
                 if (questionIndex + 1 < totalQuestions) {
                     fetchNextQuestion(topic, questionIndex + 1, totalQuestions, bufferOnly = true)
                 }
@@ -276,11 +291,8 @@ class QuizViewModel(
             }
         }
     }
-    private fun buildQuizPrompt(
-        topic: String,
-        questionNumber: Int,
-        totalQuestions: Int
-    ): String = """
+
+    private fun buildQuizPrompt(topic: String, questionNumber: Int, totalQuestions: Int): String = """
 You are a smart quiz generator. Generate question $questionNumber of $totalQuestions about: "$topic".
 
 STRICT RULES:
@@ -313,7 +325,6 @@ Rules:
         return try {
             val start = raw.indexOf("{")
             val end = raw.lastIndexOf("}")
-
             val safeJson = if (start != -1 && end != -1 && end > start) {
                 raw.substring(start, end + 1)
             } else if (start != -1) {
@@ -322,7 +333,7 @@ Rules:
                 throw IllegalStateException("No JSON found")
             }
 
-            val json = JSONObject(safeJson)
+            val json = org.json.JSONObject(safeJson)
             val optionsJson = json.getJSONObject("options")
 
             QuizQuestion(
@@ -336,25 +347,16 @@ Rules:
                 correctAnswer = json.getString("correctAnswer"),
                 explanation = json.optString("explanation", "")
             )
-
         } catch (e: Exception) {
             Log.e("QuizParse", "FAILED RAW:\n$raw", e)
-
             QuizQuestion(
                 question = "AI failed to generate question",
-                options = mapOf(
-                    "A" to "Retry",
-                    "B" to "Retry",
-                    "C" to "Retry",
-                    "D" to "Retry"
-                ),
+                options = mapOf("A" to "Retry", "B" to "Retry", "C" to "Retry", "D" to "Retry"),
                 correctAnswer = "A",
                 explanation = "Invalid AI response"
             )
         }
     }
-
-    // ─── Factory ─────────────────────────────────────────────────────────────
 
     class Factory : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.Send
@@ -20,9 +22,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.chatly.data.model.QuizSession
 import com.example.chatly.data.repository.FirebaseAiChatRepository
 import com.example.chatly.ui.chat.AiChatViewModel
 import com.example.chatly.ui.chat.QuizViewModel
@@ -34,6 +39,8 @@ import com.example.chatly.ui.components.QuizResultScreen
 import com.example.chatly.ui.components.QuizTopicDialog
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,7 +52,6 @@ fun AiChatScreen(
     quizViewModel: QuizViewModel = viewModel(factory = QuizViewModel.Factory()),
     onBackClick: () -> Unit
 ) {
-    // ── Chat state ────────────────────────────────────────────────────────────
     var menuExpandedId by remember { mutableStateOf<String?>(null) }
     val session by quizViewModel.sessionState.collectAsState()
     var editingSessionId by remember { mutableStateOf<String?>(null) }
@@ -58,13 +64,37 @@ fun AiChatScreen(
     val sessions by viewModel.sessions.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-
-    // ── Quiz state ────────────────────────────────────────────────────────────
     val quizUiState by quizViewModel.uiState.collectAsState()
 
-    // Auto-scroll when new messages arrive
+    // Quiz history
+    val quizHistory by quizViewModel.quizHistory.collectAsState()
+    val isHistoryLoading by quizViewModel.isHistoryLoading.collectAsState()
+    val historySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showHistorySheet by remember { mutableStateOf(false) }
+
+    // Load history once on entry
+    LaunchedEffect(Unit) {
+        quizViewModel.loadQuizHistory()
+    }
+
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
+    }
+
+    // Quiz History Bottom Sheet
+    if (showHistorySheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showHistorySheet = false },
+            sheetState = historySheetState,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            QuizHistorySheet(
+                history = quizHistory,
+                isLoading = isHistoryLoading,
+                onRefresh = { quizViewModel.loadQuizHistory() },
+                onDismiss = { showHistorySheet = false }
+            )
+        }
     }
 
     ModalNavigationDrawer(
@@ -77,7 +107,6 @@ fun AiChatScreen(
                     modifier = Modifier.padding(16.dp)
                 )
 
-                // New Chat
                 Button(
                     onClick = {
                         quizViewModel.resetQuiz()
@@ -91,10 +120,8 @@ fun AiChatScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // ── Quiz Mode button ──────────────────────────────────────────
                 OutlinedButton(
                     onClick = {
-                        // Close drawer first, THEN show the dialog once drawer is fully shut
                         scope.launch {
                             drawerState.close()
                             quizViewModel.startQuizSetup()
@@ -112,13 +139,35 @@ fun AiChatScreen(
                     Text("Quiz Mode")
                 }
 
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Quiz History button in drawer
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
+                            quizViewModel.loadQuizHistory()
+                            showHistorySheet = true
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Icon(Icons.Default.History, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Quiz History")
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Session list
                 LazyColumn {
-                    items(sessions) { session ->
+                    items(sessions) { chatSession ->
                         NavigationDrawerItem(
                             label = {
                                 Row(
@@ -126,7 +175,7 @@ fun AiChatScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    if (editingSessionId == session.id) {
+                                    if (editingSessionId == chatSession.id) {
                                         TextField(
                                             value = editText,
                                             onValueChange = { editText = it },
@@ -138,33 +187,36 @@ fun AiChatScreen(
                                             )
                                         )
                                         IconButton(onClick = {
-                                            viewModel.renameSession(session.id, editText)
+                                            viewModel.renameSession(chatSession.id, editText)
                                             editingSessionId = null
                                         }) {
                                             Icon(Icons.Default.Send, contentDescription = "Save")
                                         }
                                     } else {
-                                        Text(text = session.title, modifier = Modifier.weight(1f))
+                                        Text(
+                                            text = chatSession.title,
+                                            modifier = Modifier.weight(1f)
+                                        )
                                         Box {
-                                            IconButton(onClick = { menuExpandedId = session.id }) {
+                                            IconButton(onClick = { menuExpandedId = chatSession.id }) {
                                                 Icon(Icons.Default.Menu, contentDescription = "More")
                                             }
                                             DropdownMenu(
-                                                expanded = menuExpandedId == session.id,
+                                                expanded = menuExpandedId == chatSession.id,
                                                 onDismissRequest = { menuExpandedId = null }
                                             ) {
                                                 DropdownMenuItem(
                                                     text = { Text("Rename") },
                                                     onClick = {
-                                                        editingSessionId = session.id
-                                                        editText = session.title
+                                                        editingSessionId = chatSession.id
+                                                        editText = chatSession.title
                                                         menuExpandedId = null
                                                     }
                                                 )
                                                 DropdownMenuItem(
                                                     text = { Text("Delete") },
                                                     onClick = {
-                                                        viewModel.deleteSession(session.id)
+                                                        viewModel.deleteSession(chatSession.id)
                                                         menuExpandedId = null
                                                     }
                                                 )
@@ -173,11 +225,11 @@ fun AiChatScreen(
                                     }
                                 }
                             },
-                            selected = session.id == currentSessionId,
+                            selected = chatSession.id == currentSessionId,
                             onClick = {
                                 if (editingSessionId == null) {
                                     quizViewModel.resetQuiz()
-                                    viewModel.selectSession(session.id)
+                                    viewModel.selectSession(chatSession.id)
                                     scope.launch { drawerState.close() }
                                 }
                             }
@@ -198,11 +250,25 @@ fun AiChatScreen(
                                 Icon(Icons.Default.Menu, contentDescription = "Menu")
                             }
                             IconButton(onClick = onBackClick) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back"
+                                )
                             }
                         }
                     },
                     actions = {
+                        // History icon always visible in top bar
+                        IconButton(onClick = {
+                            quizViewModel.loadQuizHistory()
+                            showHistorySheet = true
+                        }) {
+                            Icon(
+                                Icons.Default.History,
+                                contentDescription = "Quiz History",
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
                         if (quizUiState.isQuizMode) {
                             IconButton(onClick = quizViewModel::resetQuiz) {
                                 Icon(
@@ -222,7 +288,6 @@ fun AiChatScreen(
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                // ── Main content: chat or quiz ────────────────────────────────
                 AnimatedContent(
                     targetState = quizUiState.isQuizMode,
                     transitionSpec = {
@@ -233,40 +298,32 @@ fun AiChatScreen(
                     modifier = Modifier.fillMaxSize()
                 ) { isQuizMode ->
                     if (isQuizMode) {
-                        if (session != null && quizUiState.isQuizMode) {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp)
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Text("Topic: ${session!!.topic}")
-                                    Text("Progress: ${session!!.currentIndex}/${session!!.totalQuestions}")
-                                    Text("Score: ${session!!.correctCount}")
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            session?.let { quizSession ->
+                                QuizSessionBanner(session = quizSession)
+                            }
+                            Box(modifier = Modifier.weight(1f)) {
+                                when {
+                                    quizUiState.isFinished -> QuizResultScreen(
+                                        uiState = quizUiState,
+                                        onPlayAgain = quizViewModel::startQuizSetup,
+                                        onExit = quizViewModel::resetQuiz
+                                    )
+                                    quizUiState.isLoading -> QuizLoadingCard()
+                                    quizUiState.error != null -> QuizErrorCard(
+                                        message = quizUiState.error!!,
+                                        onRetry = { quizViewModel.beginQuiz(quizUiState.topicInput) }
+                                    )
+                                    quizUiState.currentQuestion != null -> QuizQuestionCard(
+                                        uiState = quizUiState,
+                                        onSelectAnswer = quizViewModel::selectAnswer,
+                                        onNext = quizViewModel::nextQuestion
+                                    )
+                                    else -> QuizLoadingCard()
                                 }
                             }
                         }
-                        // ── QUIZ UI ───────────────────────────────────────────
-                        when {
-                            quizUiState.isFinished -> QuizResultScreen(
-                                uiState = quizUiState,
-                                onPlayAgain = quizViewModel::startQuizSetup,
-                                onExit = quizViewModel::resetQuiz
-                            )
-                            quizUiState.isLoading -> QuizLoadingCard()
-                            quizUiState.error != null -> QuizErrorCard(
-                                message = quizUiState.error!!,
-                                onRetry = { quizViewModel.beginQuiz(quizUiState.topicInput) }
-                            )
-                            quizUiState.currentQuestion != null -> QuizQuestionCard(
-                                uiState = quizUiState,
-                                onSelectAnswer = quizViewModel::selectAnswer,
-                                onNext = quizViewModel::nextQuestion
-                            )
-                            else -> QuizLoadingCard()
-                        }
                     } else {
-                        // ── CHAT UI ───────────────────────────────────────────
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -336,7 +393,6 @@ fun AiChatScreen(
                     }
                 }
 
-                // ── Topic dialog rendered INSIDE Scaffold Box, on top of everything ──
                 if (quizUiState.isTopicSelectionStep) {
                     QuizTopicDialog(
                         uiState = quizUiState,
@@ -352,7 +408,271 @@ fun AiChatScreen(
     }
 }
 
-// ─── Error card ───────────────────────────────────────────────────────────────
+// ─── Quiz History Bottom Sheet ────────────────────────────────────────────────
+
+@Composable
+private fun QuizHistorySheet(
+    history: List<QuizSession>,
+    isLoading: Boolean,
+    onRefresh: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 32.dp)
+    ) {
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Quiz History",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Row {
+                TextButton(onClick = onRefresh) { Text("Refresh") }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = "Close")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        when {
+            isLoading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            history.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("🎯", fontSize = 48.sp)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "No quiz sessions yet",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Complete a quiz and it will appear here",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+
+            else -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 500.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(history) { quizSession ->
+                        QuizHistoryCard(session = quizSession)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuizHistoryCard(session: QuizSession) {
+    val pct = if (session.totalQuestions > 0)
+        (session.correctCount.toFloat() / session.totalQuestions * 100).toInt()
+    else 0
+
+    val scoreColor = when {
+        pct >= 80 -> Color(0xFF22C55E)
+        pct >= 60 -> MaterialTheme.colorScheme.primary
+        pct >= 40 -> Color(0xFFF59E0B)
+        else -> Color(0xFFEF4444)
+    }
+
+    val dateStr = remember(session.createdAt) {
+        SimpleDateFormat("MMM dd, yyyy  HH:mm", Locale.getDefault())
+            .format(Date(session.createdAt))
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Score circle
+            Box(
+                modifier = Modifier.size(56.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    progress = { pct / 100f },
+                    modifier = Modifier.size(56.dp),
+                    strokeWidth = 5.dp,
+                    color = scoreColor,
+                    trackColor = scoreColor.copy(alpha = 0.15f)
+                )
+                Text(
+                    text = "$pct%",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = scoreColor
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            // Info
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = session.topic,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "${session.correctCount} / ${session.totalQuestions} correct",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = dateStr,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
+
+            // Finished badge
+            if (session.isFinished) {
+                Surface(
+                    shape = RoundedCornerShape(50.dp),
+                    color = Color(0xFF22C55E).copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = "Done",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF22C55E)
+                    )
+                }
+            } else {
+                Surface(
+                    shape = RoundedCornerShape(50.dp),
+                    color = Color(0xFFF5A70B).copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = "In progress",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFAF744C)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─── Quiz Session Banner ──────────────────────────────────────────────────────
+
+@Composable
+private fun QuizSessionBanner(session: QuizSession) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        tonalElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = session.topic,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    maxLines = 1
+                )
+                Text(
+                    text = "Question ${(session.currentIndex + 1).coerceAtMost(session.totalQuestions)} of ${session.totalQuestions}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(50.dp),
+                    color = MaterialTheme.colorScheme.primary
+                ) {
+                    Text(
+                        text = "✓ ${session.correctCount}",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(50.dp),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f)
+                ) {
+                    Text(
+                        text = "/ ${session.totalQuestions}",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─── Error Card ───────────────────────────────────────────────────────────────
 
 @Composable
 private fun QuizErrorCard(message: String, onRetry: () -> Unit) {
