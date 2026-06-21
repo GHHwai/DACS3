@@ -13,14 +13,30 @@ class QuizRepository(
         firestore
             .collection("quiz_sessions")
             .document(session.id)
-            .set(session)
+            .set(
+                mapOf(
+                    "id" to session.id,
+                    "userId" to session.userId,
+                    "topic" to session.topic,
+                    "totalQuestions" to session.totalQuestions,
+                    "correctCount" to session.correctCount,
+                    "userAnswers" to session.userAnswers,
+                    "currentIndex" to session.currentIndex,
+                    "isFinished" to session.isFinished,
+                    "createdAt" to session.createdAt
+                )
+            )
     }
 
     fun updateSession(sessionId: String, data: Map<String, Any>) {
-        firestore
-            .collection("quiz_sessions")
+
+        val cleaned = data.toMutableMap().apply {
+            remove("finished")
+        }
+
+        firestore.collection("quiz_sessions")
             .document(sessionId)
-            .update(data)
+            .update(cleaned)
     }
 
     fun getSessionHistory(userId: String, callback: (List<QuizSession>) -> Unit) {
@@ -36,7 +52,6 @@ class QuizRepository(
                     val data = doc.data ?: return@mapNotNull null
 
                     val isFinished = data["isFinished"] as? Boolean
-                        ?: data["finished"] as? Boolean
                         ?: false
 
                     val session = QuizSession(
