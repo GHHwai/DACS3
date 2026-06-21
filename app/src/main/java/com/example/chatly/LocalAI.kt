@@ -29,10 +29,20 @@ interface OllamaApi {
 
 object OllamaClient {
 
-    val api: OllamaApi by lazy {
+    private const val BASE_URL = "http://10.0.2.2:11434/"
 
+    private val okHttpClient = okhttp3.OkHttpClient.Builder()
+        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+        .callTimeout(150, java.util.concurrent.TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
+        .build()
+
+    val api: OllamaApi by lazy {
         Retrofit.Builder()
-            .baseUrl("http://10.0.2.2:11434/")
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(OllamaApi::class.java)

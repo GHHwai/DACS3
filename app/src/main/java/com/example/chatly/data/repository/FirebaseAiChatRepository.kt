@@ -26,7 +26,7 @@ You are a smart and friendly learning assistant in the Chatly app.
 
 Tasks:
 
-1. Respond in natural Vietnamese.
+1. Respond in natural English.
 
 2. Provide support for learning, coding, and assignments.
 
@@ -56,8 +56,10 @@ Tasks:
             )
 
             Log.d("FIREBASE_AI", "📩 RAW RESPONSE = $response")
-
-            val text = response.text
+            val text = response.candidates
+                .firstOrNull()
+                ?.content
+                .toString()
 
             if (text == null) {
                 Log.e("FIREBASE_AI", "⚠️ RESPONSE TEXT IS NULL")
@@ -123,12 +125,16 @@ Tasks:
 
             Log.d("OLLAMA_DEBUG", "📩 RAW RESPONSE = $response")
 
-            val content = response.message?.content
+            val raw = response.message?.content
 
-            Log.d("OLLAMA_DEBUG", "💬 CONTENT = $content")
+            Log.d("OLLAMA_RAW", "raw = $raw")
 
-            return content
+            if (raw.isNullOrBlank()) return null
 
+            val cleaned = cleanOllamaResponse(raw)
+
+            Log.d("OLLAMA_DEBUG", "💬 CONTENT = $cleaned")
+            return cleaned
         } catch (e: Exception) {
 
             Log.e("OLLAMA_ERROR", "❌ MESSAGE: ${e.message}")
@@ -137,6 +143,52 @@ Tasks:
 
             return null
         }
+    }
+    suspend fun generateQuizContent(
+        prompt: String
+    ): Result<String> {
+
+        // Gemini
+        callFirebaseAI(prompt)?.let {
+            return Result.success(it)
+        }
+
+        Log.d("QUIZ_AI", "Gemini failed -> Ollama fallback")
+
+        // Ollama
+        try {
+
+            val response = OllamaClient.api.chat(
+                OllamaRequest(
+                    model = "llama2",
+                    messages = listOf(
+                        OllamaMessage(
+                            role = "user",
+                            content = prompt
+                        )
+                    )
+                )
+            )
+
+            val text = response.message?.content
+
+            if (!text.isNullOrBlank()) {
+                return Result.success(text)
+            }
+
+        } catch (e: Exception) {
+
+            Log.e(
+                "QUIZ_AI",
+                "Ollama failed",
+                e
+            )
+        }
+
+        // Chỉ tới đây mới coi là lỗi thật sự
+        return Result.failure(
+            Exception("Both Gemini and Ollama failed")
+        )
     }
     suspend fun getAiResponse(
         messages: List<AiChatMessage>,
@@ -219,13 +271,23 @@ Tasks:
     }
     fun saveMessage(userId: String, sessionId: String, message: AiChatMessage) {
 
+        val msg = message.copy(
+            timestamp = System.currentTimeMillis()
+        )
+
         firestore
             .collection("users")
             .document(userId)
             .collection("sessions")
             .document(sessionId)
             .collection("messages")
-            .add(message)
+            .add(
+                mapOf(
+                    "content" to msg.content,
+                    "isMine" to msg.isMine,
+                    "timestamp" to msg.timestamp
+                )
+            )
     }
     fun getMessages(userId: String, sessionId: String, callback: (List<AiChatMessage>) -> Unit) {
 
@@ -238,8 +300,12 @@ Tasks:
             .get()
             .addOnSuccessListener { snap ->
 
-                val list = snap.documents.mapNotNull {
-                    it.toObject(AiChatMessage::class.java)
+                val list = snap.documents.mapNotNull { doc ->
+                    AiChatMessage(
+                        content = doc.getString("content") ?: "",
+                        isMine = doc.getBoolean("isMine") ?: false,
+                        timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis()
+                    )
                 }
 
                 callback(list)
@@ -290,5 +356,37 @@ Tasks:
                     sessionRef.delete()
                 }
             }
+    }
+    private fun cleanOllamaResponse(input: String): String {
+
+        var text = input.trim()
+
+        // 1. remove markdown code block
+        text = text.replace("```json", "")
+            .replace("```", "")
+            .trim()
+
+        // 2. remove \n artifacts (không bắt buộc nhưng sạch log)
+        text = text.replace("\\n", "")
+            .replace("\n", "")
+            .trim()
+
+        // 3. extract JSON block (quan trọng nhất)
+        val start = text.indexOf("{")
+        val end = text.lastIndexOf("}")
+
+        if (start != -1 && end != -1 && end > start) {
+            text = text.substring(start, end + 1)
+        }
+
+        // 4. fix missing braces (AI bị cắt)
+        val open = text.count { it == '{' }
+        val close = text.count { it == '}' }
+
+        if (close < open) {
+            text += "}".repeat(open - close)
+        }
+
+        return text
     }
 }

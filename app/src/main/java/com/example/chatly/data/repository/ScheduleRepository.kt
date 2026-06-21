@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
-
 class ScheduleRepository {
 
     private val firestore = FirebaseFirestore.getInstance()
