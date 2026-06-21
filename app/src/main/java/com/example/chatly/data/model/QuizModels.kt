@@ -15,6 +15,7 @@ data class QuizSession(
     val correctCount: Int = 0,
     val questions: List<QuizQuestion> = emptyList(),
     val userAnswers: List<String> = emptyList(),   // list of "A"/"B"/"C"/"D" per question
+    val currentIndex: Int = 0,
     val isFinished: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )

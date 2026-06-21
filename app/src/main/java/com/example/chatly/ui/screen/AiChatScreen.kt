@@ -47,6 +47,7 @@ fun AiChatScreen(
 ) {
     // ── Chat state ────────────────────────────────────────────────────────────
     var menuExpandedId by remember { mutableStateOf<String?>(null) }
+    val session by quizViewModel.sessionState.collectAsState()
     var editingSessionId by remember { mutableStateOf<String?>(null) }
     var editText by remember { mutableStateOf("") }
     val messages by viewModel.messages.collectAsState()
@@ -232,6 +233,19 @@ fun AiChatScreen(
                     modifier = Modifier.fillMaxSize()
                 ) { isQuizMode ->
                     if (isQuizMode) {
+                        if (session != null && quizUiState.isQuizMode) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text("Topic: ${session!!.topic}")
+                                    Text("Progress: ${session!!.currentIndex}/${session!!.totalQuestions}")
+                                    Text("Score: ${session!!.correctCount}")
+                                }
+                            }
+                        }
                         // ── QUIZ UI ───────────────────────────────────────────
                         when {
                             quizUiState.isFinished -> QuizResultScreen(
